@@ -8,29 +8,29 @@ import {
 } from 'typeorm';
 import { OpcionMenuPerfil } from './opcion-menu-perfil.entity';
 
-@Entity('OpcionesMenu')
+@Entity('opciones_menu')
 export class OpcionMenu {
-  @PrimaryGeneratedColumn('uuid', { name: 'IdOpcionMenu' })
+  @PrimaryGeneratedColumn('uuid')
   id: string;
 
-  @Column('varchar', { name: 'Nombre', length: 50 })
+  @Column('varchar', { name: 'nombre', length: 50 })
   nombre: string;
 
-  @Column('varchar', { name: 'UrlMenu', length: 50 })
+  @Column('varchar', { name: 'url_menu', length: 50 })
   urlMenu: string;
 
-  @Column('varchar', { name: 'Descripcion', length: 100, nullable: true })
+  @Column('varchar', { name: 'descripcion', length: 100, nullable: true })
   descripcion: string;
 
-  @Column('boolean', { name: 'EstadoRegistro', default: true })
+  @Column('boolean', { name: 'estado_registro', default: true })
   estadoRegistro: boolean;
 
   // --- Relación Padre-Hijo (jerarquía) ---
-  @Column('uuid', { name: 'IdPadre', nullable: true })
+  @Column('uuid', { name: 'id_padre', nullable: true })
   idPadre: string;
 
   @ManyToOne(() => OpcionMenu, (opcion) => opcion.hijos)
-  @JoinColumn({ name: 'IdPadre' })
+  @JoinColumn({ name: 'id_padre' })
   padre: OpcionMenu;
 
   @OneToMany(() => OpcionMenu, (opcion) => opcion.padre)

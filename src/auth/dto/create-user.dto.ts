@@ -5,13 +5,26 @@ import {
   MaxLength,
   Matches,
   IsOptional,
+  IsArray,
+  IsUUID,
+  ArrayMinSize,
 } from 'class-validator';
+import { ApiProperty } from '@nestjs/swagger';
 
 export class CreateUserDto {
+  @ApiProperty({
+    description: 'Correo electrónico del usuario',
+    example: 'admin@example.com',
+  })
   @IsString()
   @IsEmail()
   correoElectronico: string;
 
+  @ApiProperty({
+    description:
+      'Contraseña del usuario. Debe tener al menos 6 caracteres, una mayúscula, una minúscula y un número o caracter especial.',
+    example: 'Password123!',
+  })
   @IsString()
   @MinLength(6)
   @MaxLength(50)
@@ -21,26 +34,58 @@ export class CreateUserDto {
   })
   clave: string;
 
+  @ApiProperty({
+    description: 'Nombres completos del usuario',
+    example: 'Juan Alberto',
+  })
   @IsString()
   @MinLength(1)
   nombres: string;
 
+  @ApiProperty({
+    description: 'Apellido paterno del usuario',
+    example: 'Pérez',
+  })
   @IsString()
   @MinLength(1)
   apellidoPaterno: string;
 
+  @ApiProperty({
+    description: 'Documento Nacional de Identidad del usuario',
+    example: '71234567',
+  })
   @IsString()
   @MinLength(8)
   @MaxLength(15)
   dni: string;
 
+  @ApiProperty({
+    description: 'Apellido materno del usuario (opcional)',
+    example: 'Gómez',
+    required: false,
+  })
   @IsOptional()
   @IsString()
   @MinLength(1)
   apellidoMaterno?: string;
 
+  @ApiProperty({
+    description: 'Número de celular del usuario (opcional)',
+    example: '987654321',
+    required: false,
+  })
   @IsOptional()
   @IsString()
   @MinLength(1)
   celular?: string;
+
+  @ApiProperty({
+    description:
+      'Array de IDs de los perfiles a asignar al usuario. Se requiere al menos uno.',
+    example: ['uuid-del-perfil-tecnico'],
+  })
+  @IsArray()
+  @IsUUID('4', { each: true })
+  @ArrayMinSize(1) // Valida que el array tenga al menos un elemento
+  perfilesIds: string[];
 }

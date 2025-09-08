@@ -10,55 +10,65 @@ import {
 } from 'typeorm';
 import { UsuarioPerfil } from './usuario-perfil.entity';
 
-@Entity('Usuario')
+@Entity('usuarios')
 export class Usuario {
-  @PrimaryGeneratedColumn('uuid', { name: 'IdUsuario' })
+  @PrimaryGeneratedColumn('uuid')
   id: string;
 
-  @Column('varchar', { name: 'DNI', length: 15 })
+  @Column('varchar', { name: 'dni', length: 15 })
   dni: string;
 
-  @Column('varchar', { name: 'Nombres', length: 40 })
+  @Column('varchar', { name: 'nombres', length: 40 })
   nombres: string;
 
-  @Column('varchar', { name: 'ApellidoPaterno', length: 40 })
+  @Column('varchar', { name: 'apellido_paterno', length: 40 })
   apellidoPaterno: string;
 
-  @Column('varchar', { name: 'ApellidoMaterno', length: 40, nullable: true })
+  @Column('varchar', { name: 'apellido_materno', length: 40, nullable: true })
   apellidoMaterno: string;
 
-  @Column('varchar', { name: 'Celular', length: 15, nullable: true })
+  @Column('varchar', { name: 'celular', length: 15, nullable: true })
   celular: string;
 
-  @Column('varchar', { name: 'CorreoElectronico', length: 40, unique: true })
+  @Column('varchar', { name: 'correo_electronico', length: 40, unique: true })
   correoElectronico: string;
 
-  @Column('varchar', { name: 'Clave', length: 255, select: false })
+  @Column('varchar', { name: 'clave', length: 255, select: false })
   clave: string;
 
-  @Column('boolean', { name: 'EstadoRegistro', default: true })
+  @Column('boolean', { name: 'estado_registro', default: true })
   estadoRegistro: boolean;
+
+  @CreateDateColumn({ name: 'fecha_creacion', type: 'timestamptz' })
+  fechaCreacion: Date;
+
+  @UpdateDateColumn({
+    name: 'fecha_modificacion',
+    type: 'timestamptz',
+    nullable: true,
+  })
+  fechaModificacion: Date;
 
   // --- Relaciones ---
   @OneToMany(() => UsuarioPerfil, (usuarioPerfil) => usuarioPerfil.usuario)
   perfilesLink: UsuarioPerfil[];
 
   // --- Auditoría ---
-  @ManyToOne(() => Usuario, { nullable: true })
-  @JoinColumn({ name: 'UsuarioCreacion' })
-  usuarioCreacion: Usuario;
+  // @ManyToOne(() => Usuario, { nullable: true })
+  // @JoinColumn({ name: 'UsuarioCreacion' })
+  // usuarioCreacion: Usuario;
 
-  @CreateDateColumn({ name: 'FechaCreacion', type: 'timestamp' })
-  fechaCreacion: Date;
+  // @CreateDateColumn({ name: 'FechaCreacion', type: 'timestamp' })
+  // fechaCreacion: Date;
 
-  @ManyToOne(() => Usuario, { nullable: true })
-  @JoinColumn({ name: 'UsuarioModificacion' })
-  usuarioModificacion: Usuario;
+  // @ManyToOne(() => Usuario, { nullable: true })
+  // @JoinColumn({ name: 'UsuarioModificacion' })
+  // usuarioModificacion: Usuario;
 
-  @UpdateDateColumn({
-    name: 'FechaModificacion',
-    type: 'timestamp',
-    nullable: true,
-  })
-  fechaModificacion: Date;
+  // @UpdateDateColumn({
+  //   name: 'FechaModificacion',
+  //   type: 'timestamp',
+  //   nullable: true,
+  // })
+  // fechaModificacion: Date;
 }

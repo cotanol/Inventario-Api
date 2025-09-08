@@ -2,26 +2,26 @@ import { Entity, Column, ManyToOne, JoinColumn, PrimaryColumn } from 'typeorm';
 import { OpcionMenu } from './opcion-menu.entity';
 import { Perfil } from './perfil.entity';
 
-@Entity('OpcionesMenu_Perfiles')
+@Entity('opciones_menu_perfiles')
 export class OpcionMenuPerfil {
-  @PrimaryColumn('uuid', { name: 'IdOpcionMenu' })
+  @PrimaryColumn('uuid', { name: 'id_opcion_menu' })
   idOpcionMenu: string;
 
-  @PrimaryColumn('uuid', { name: 'IdPerfil' })
+  @PrimaryColumn('uuid', { name: 'id_perfil' })
   idPerfil: string;
 
-  @Column('smallint', { name: 'Orden' })
+  @Column('smallint', { name: 'orden' })
   orden: number;
 
-  @Column('boolean', { name: 'EstadoRegistro', default: true })
+  @Column('boolean', { name: 'estado_registro', default: true })
   estadoRegistro: boolean;
 
   // --- Relaciones ---
   @ManyToOne(() => OpcionMenu, (opcionMenu) => opcionMenu.perfilesLink)
-  @JoinColumn({ name: 'IdOpcionMenu' })
+  @JoinColumn({ name: 'id_opcion_menu' })
   opcionMenu: OpcionMenu;
 
   @ManyToOne(() => Perfil, (perfil) => perfil.opcionesMenuLink)
-  @JoinColumn({ name: 'IdPerfil' })
+  @JoinColumn({ name: 'id_perfil' })
   perfil: Perfil;
 }

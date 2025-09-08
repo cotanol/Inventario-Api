@@ -28,7 +28,7 @@ import { Perfil } from './entities/perfil.entity';
       useFactory: (configService: ConfigService) => {
         return {
           secret: configService.get('JWT_SECRET'),
-          signOptions: { expiresIn: '2h' },
+          signOptions: { expiresIn: configService.get('JWT_EXPIRATION') },
         };
       },
     }),
