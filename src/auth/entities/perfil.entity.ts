@@ -4,8 +4,8 @@ import { OpcionMenuPerfil } from './opcion-menu-perfil.entity';
 
 @Entity('perfiles')
 export class Perfil {
-  @PrimaryGeneratedColumn('uuid')
-  id: string;
+  @PrimaryGeneratedColumn()
+  id: number;
 
   @Column('varchar', { name: 'nombre', length: 50 })
   nombre: string;

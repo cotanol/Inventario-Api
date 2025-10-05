@@ -4,7 +4,9 @@ import {
   Post,
   Body,
   Param,
-  ParseUUIDPipe,
+  ParseIntPipe,
+  Patch,
+  Delete,
 } from '@nestjs/common';
 import { AuthService } from './auth.service';
 import { AssignRolesDto, CreateUserDto, LoginUserDto } from './dto';
@@ -20,6 +22,8 @@ import {
   ApiResponse,
   ApiTags,
 } from '@nestjs/swagger';
+import { ChangeStatusDto } from './dto/change-status.dto';
+import { UpdateUserDto } from './dto/update-user.dto';
 
 @ApiTags('Auth')
 @Controller('auth')
@@ -130,7 +134,7 @@ export class AuthController {
   })
   @Auth(ValidRoles.admin)
   assignRoles(
-    @Param('id', ParseUUIDPipe) id: string,
+    @Param('id', ParseIntPipe) id: number,
     @Body() assignRolesDto: AssignRolesDto,
   ) {
     return this.authService.assignRoles(id, assignRolesDto);
@@ -188,5 +192,109 @@ export class AuthController {
   @Auth(ValidRoles.admin)
   findAllUsers() {
     return this.authService.findAllUsers();
+  }
+
+  @Patch('change-status/:id')
+  @ApiOperation({
+    summary: 'Cambiar el estado de registro de un usuario',
+    description:
+      'Permite activar o desactivar la cuenta de un usuario existente. Requiere rol de administrador.',
+  })
+  @ApiBearerAuth()
+  @ApiResponse({ status: 200, description: 'Estado del usuario actualizado.' })
+  @ApiResponse({
+    status: 400,
+    description: 'Bad Request: El estado proporcionado es inválido.',
+  })
+  @ApiResponse({
+    status: 403,
+    description: 'Forbidden: No tienes permisos de administrador.',
+  })
+  @ApiResponse({
+    status: 404,
+    description: 'Not Found: Usuario no encontrado.',
+  })
+  @Auth(ValidRoles.admin)
+  changeStatus(
+    @Param('id', ParseIntPipe) id: number,
+    @Body() changeStatusDto: ChangeStatusDto,
+  ) {
+    return this.authService.changeStatus(id, changeStatusDto);
+  }
+
+  @Get('user/:id')
+  @ApiOperation({
+    summary: 'Obtener información de un usuario por ID',
+    description:
+      'Permite obtener los datos de un usuario específico utilizando su ID. Requiere rol de administrador.',
+  })
+  @ApiBearerAuth()
+  @ApiResponse({
+    status: 200,
+    description: 'Usuario encontrado y datos devueltos correctamente.',
+  })
+  @ApiResponse({
+    status: 403,
+    description: 'Forbidden: No tienes permisos de administrador.',
+  })
+  @ApiResponse({
+    status: 404,
+    description: 'Not Found: Usuario no encontrado.',
+  })
+  @Auth(ValidRoles.admin)
+  getUserById(@Param('id', ParseIntPipe) id: number) {
+    return this.authService.findUserById(id);
+  }
+
+  @Patch('update-user/:id')
+  @ApiOperation({
+    summary: 'Actualizar la información de un usuario',
+    description:
+      'Permite modificar los datos de un usuario existente, incluyendo sus perfiles. Requiere rol de administrador.',
+  })
+  @ApiBearerAuth()
+  @ApiResponse({
+    status: 200,
+    description: 'Usuario actualizado correctamente.',
+  })
+  @ApiResponse({
+    status: 400,
+    description: 'Bad Request: La información proporcionada es inválida.',
+  })
+  @ApiResponse({
+    status: 403,
+    description: 'Forbidden: No tienes permisos de administrador.',
+  })
+  @ApiResponse({
+    status: 404,
+    description: 'Not Found: Usuario no encontrado.',
+  })
+  @Auth(ValidRoles.admin)
+  update(
+    @Param('id', ParseIntPipe) id: number,
+    @Body() updateUserDto: UpdateUserDto,
+  ) {
+    return this.authService.updateUser(id, updateUserDto);
+  }
+
+  @Delete('delete-user/:id')
+  @ApiOperation({
+    summary: 'Eliminar un usuario',
+    description:
+      'Permite eliminar un usuario existente del sistema. Requiere rol de administrador.',
+  })
+  @ApiBearerAuth()
+  @ApiResponse({ status: 200, description: 'Usuario eliminado correctamente.' })
+  @ApiResponse({
+    status: 403,
+    description: 'Forbidden: No tienes permisos de administrador.',
+  })
+  @ApiResponse({
+    status: 404,
+    description: 'Not Found: Usuario no encontrado.',
+  })
+  @Auth(ValidRoles.admin)
+  remove(@Param('id', ParseIntPipe) id: number) {
+    return this.authService.remove(id);
   }
 }

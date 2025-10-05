@@ -3,7 +3,7 @@ services:
     image: postgres:14.3
     restart: always
     ports:
-      - '5435:5432' # Nuevo puerto para evitar conflictos
+      - '5439:5432' # Nuevo puerto para evitar conflictos
     environment:
       POSTGRES_PASSWORD: ${DB_PASSWORD}
       POSTGRES_DB: ${DB_NAME}

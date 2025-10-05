@@ -4,11 +4,11 @@ import { Perfil } from './perfil.entity';
 
 @Entity('opciones_menu_perfiles')
 export class OpcionMenuPerfil {
-  @PrimaryColumn('uuid', { name: 'id_opcion_menu' })
-  idOpcionMenu: string;
+  @PrimaryColumn('int', { name: 'id_opcion_menu' })
+  idOpcionMenu: number;
 
-  @PrimaryColumn('uuid', { name: 'id_perfil' })
-  idPerfil: string;
+  @PrimaryColumn('int', { name: 'id_perfil' })
+  idPerfil: number;
 
   @Column('smallint', { name: 'orden' })
   orden: number;

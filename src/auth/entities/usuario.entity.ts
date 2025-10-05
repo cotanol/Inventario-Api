@@ -12,8 +12,8 @@ import { UsuarioPerfil } from './usuario-perfil.entity';
 
 @Entity('usuarios')
 export class Usuario {
-  @PrimaryGeneratedColumn('uuid')
-  id: string;
+  @PrimaryGeneratedColumn()
+  id: number;
 
   @Column('varchar', { name: 'dni', length: 15 })
   dni: string;

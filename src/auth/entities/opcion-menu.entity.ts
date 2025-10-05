@@ -10,8 +10,8 @@ import { OpcionMenuPerfil } from './opcion-menu-perfil.entity';
 
 @Entity('opciones_menu')
 export class OpcionMenu {
-  @PrimaryGeneratedColumn('uuid')
-  id: string;
+  @PrimaryGeneratedColumn()
+  id: number;
 
   @Column('varchar', { name: 'nombre', length: 50 })
   nombre: string;
@@ -26,8 +26,8 @@ export class OpcionMenu {
   estadoRegistro: boolean;
 
   // --- Relación Padre-Hijo (jerarquía) ---
-  @Column('uuid', { name: 'id_padre', nullable: true })
-  idPadre: string;
+  @Column('int', { name: 'id_padre', nullable: true })
+  idPadre: number;
 
   @ManyToOne(() => OpcionMenu, (opcion) => opcion.hijos)
   @JoinColumn({ name: 'id_padre' })

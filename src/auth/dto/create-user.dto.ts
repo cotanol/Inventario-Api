@@ -6,9 +6,10 @@ import {
   Matches,
   IsOptional,
   IsArray,
-  IsUUID,
+  IsInt,
   ArrayMinSize,
 } from 'class-validator';
+import { Type } from 'class-transformer';
 import { ApiProperty } from '@nestjs/swagger';
 
 export class CreateUserDto {
@@ -82,10 +83,11 @@ export class CreateUserDto {
   @ApiProperty({
     description:
       'Array de IDs de los perfiles a asignar al usuario. Se requiere al menos uno.',
-    example: ['uuid-del-perfil-tecnico'],
+    example: [1, 2],
   })
   @IsArray()
-  @IsUUID('4', { each: true })
-  @ArrayMinSize(1) // Valida que el array tenga al menos un elemento
-  perfilesIds: string[];
+  @IsInt({ each: true })
+  @Type(() => Number)
+  @ArrayMinSize(1)
+  perfilesIds: number[];
 }

@@ -14,11 +14,11 @@ import * as bcrypt from 'bcrypt';
 import { LoginUserDto } from './dto/login-user.dto';
 import { JwtPayLoad } from './interfaces/jwt-payload.interface';
 import { JwtService } from '@nestjs/jwt';
-
-import { perfilTecnicoId } from 'src/seed/data/seed-data';
 import { UsuarioPerfil } from './entities/usuario-perfil.entity';
 import { Perfil } from './entities/perfil.entity';
 import { OpcionMenu } from './entities/opcion-menu.entity';
+import { ChangeStatusDto } from './dto/change-status.dto';
+import { UpdateUserDto } from './dto/update-user.dto';
 
 @Injectable()
 export class AuthService {
@@ -78,12 +78,21 @@ export class AuthService {
       // 5. Si todo salió bien, confirmamos la transacción.
       await queryRunner.commitTransaction();
 
-      const userResponse: Partial<Usuario> = user;
-      delete userResponse.clave;
+      const token = this.getJwtToken({ id: user.id });
+      const newUser = await this.userRepository.findOne({
+        where: { id: user.id },
+        relations: ['perfilesLink', 'perfilesLink.perfil'],
+      });
+
+      if (!newUser) {
+        throw new InternalServerErrorException(
+          'Error al crear el usuario: no se pudo encontrar el usuario recién guardado.',
+        );
+      }
 
       return {
-        ...userResponse,
-        token: this.getJwtToken({ id: user.id }),
+        user: this._buildUserResponse(newUser),
+        token: token,
       };
     } catch (error) {
       // 6. Si algo falla, revertimos todos los cambios.
@@ -101,11 +110,19 @@ export class AuthService {
     const user = await this.userRepository.findOne({
       where: { correoElectronico: emailLower },
       select: {
-        correoElectronico: true,
-        clave: true,
         id: true,
+        dni: true,
+        nombres: true,
+        apellidoPaterno: true,
+        apellidoMaterno: true,
+        celular: true,
+        correoElectronico: true,
         estadoRegistro: true,
+        fechaCreacion: true,
+        fechaModificacion: true,
+        clave: true, // Necesario para la validación
       },
+      relations: ['perfilesLink', 'perfilesLink.perfil'],
     });
     if (!user) {
       throw new UnauthorizedException('Invalid credentials');
@@ -115,27 +132,23 @@ export class AuthService {
     if (!isPasswordValid) {
       throw new UnauthorizedException('Invalid credentials');
     }
-
-    const userResponse: Partial<Usuario> = user;
-    delete userResponse.clave;
+    const token = this.getJwtToken({ id: user.id });
 
     return {
-      user: userResponse,
-      token: this.getJwtToken({ id: user.id }),
+      user: this._buildUserResponse(user),
+      token: token,
     };
   }
 
   async checkAuthStatus(user: Usuario) {
-    const userResponse: Partial<Usuario> = user;
-    delete userResponse.clave;
+    const token = this.getJwtToken({ id: user.id });
 
     return {
-      user: userResponse,
-      token: this.getJwtToken({ id: user.id }),
+      user: this._buildUserResponse(user),
+      token: token,
     };
   }
 
-  //  Listar todos los perfiles disponibles ---
   async findAllPerfiles(): Promise<Perfil[]> {
     return this.perfilRepository.find({
       order: {
@@ -144,53 +157,140 @@ export class AuthService {
     });
   }
 
-  // Listar todos los usuarios ---
-  async findAllUsers(): Promise<Usuario[]> {
-    // La propiedad 'clave' en la entidad Usuario tiene `select: false`,
-    // por lo que no será devuelta por defecto en una consulta find().
-    // Esto es una medida de seguridad importante.
-    return this.userRepository.find({
-      relations: ['perfilesLink', 'perfilesLink.perfil'], // Cargar los perfiles de cada usuario
+  async findUserById(id: number) {
+    const user = await this.userRepository.findOne({
+      where: { id },
+      relations: ['perfilesLink', 'perfilesLink.perfil'],
+    });
+    if (!user) {
+      throw new NotFoundException(`Usuario con ID "${id}" no encontrado.`);
+    }
+    return this._buildUserResponse(user);
+  }
+
+  async findAllUsers() {
+    const users = await this.userRepository.find({
+      relations: ['perfilesLink', 'perfilesLink.perfil'],
       order: {
         nombres: 'ASC',
       },
     });
+    return users.map((user) => this._buildUserResponse(user));
   }
 
-  async assignRoles(
-    userId: string,
-    assignRolesDto: AssignRolesDto,
-  ): Promise<{ message: string }> {
-    const { perfilesIds } = assignRolesDto;
-
-    // 1. Validar que el usuario exista
-    const user = await this.userRepository.findOneBy({ id: userId });
+  async remove(id: number) {
+    const user = await this.userRepository.findOneBy({ id });
     if (!user) {
-      throw new NotFoundException(`Usuario con ID "${userId}" no encontrado.`);
+      throw new NotFoundException(`Usuario con ID "${id}" no encontrado.`);
     }
 
-    // 2. Validar que todos los perfiles enviados existan en la BD
-    const perfiles = await this.perfilRepository.findBy({
-      id: In(perfilesIds),
-    });
-    // Esta validación es una segunda capa de seguridad. Si el DTO ya exige
-    // perfilesIds.length >= 1, esta condición solo fallaría si se envían IDs inválidos.
-    if (perfiles.length !== perfilesIds.length) {
-      throw new BadRequestException('Uno o más IDs de perfil no son válidos.');
+    await this.usuarioPerfilRepository.delete({ idUsuario: id });
+
+    const result = await this.userRepository.delete(id);
+    if (result.affected === 0) {
+      throw new NotFoundException(`Usuario con ID "${id}" no encontrado.`);
     }
 
-    // 3. Usar una transacción para garantizar la atomicidad de la operación
+    return { message: 'Usuario eliminado correctamente.' };
+  }
+
+  async updateUser(id: number, updateUserDto: UpdateUserDto) {
+    const { perfilesIds, ...userDataToUpdate } = updateUserDto;
+
     const queryRunner = this.dataSource.createQueryRunner();
     await queryRunner.connect();
     await queryRunner.startTransaction();
 
     try {
-      // 3a. Borra todos los perfiles actuales del usuario
-      await queryRunner.manager.delete(UsuarioPerfil, { idUsuario: userId });
+      const user = await queryRunner.manager.findOneBy(Usuario, { id });
+      if (!user) {
+        throw new NotFoundException(`Usuario con ID "${id}" no encontrado.`);
+      }
 
-      // 3b. Inserta los nuevos perfiles.
-      // Gracias a la validación en el DTO (@ArrayMinSize(1)), sabemos que
-      // el array 'perfiles' nunca estará vacío en este punto.
+      if (Object.keys(userDataToUpdate).length > 0) {
+        queryRunner.manager.merge(Usuario, user, userDataToUpdate);
+        await queryRunner.manager.save(user);
+      }
+
+      if (perfilesIds) {
+        const perfiles = await this.perfilRepository.findBy({
+          id: In(perfilesIds),
+        });
+        if (perfiles.length !== perfilesIds.length) {
+          throw new BadRequestException(
+            'Uno o más IDs de perfil no son válidos.',
+          );
+        }
+
+        await queryRunner.manager.delete(UsuarioPerfil, { idUsuario: id });
+
+        const newUserProfiles = perfiles.map((perfil) =>
+          this.usuarioPerfilRepository.create({
+            idUsuario: id,
+            idPerfil: perfil.id,
+          }),
+        );
+        await queryRunner.manager.save(newUserProfiles);
+      }
+
+      await queryRunner.commitTransaction();
+
+      const updatedUserWithRelations = await this.userRepository.findOne({
+        where: { id },
+        relations: ['perfilesLink', 'perfilesLink.perfil'],
+      });
+
+      if (!updatedUserWithRelations) {
+        throw new InternalServerErrorException(
+          'No se pudo encontrar el usuario después de la actualización.',
+        );
+      }
+
+      return this._buildUserResponse(updatedUserWithRelations);
+    } catch (error) {
+      await queryRunner.rollbackTransaction();
+      this.handleDBError(error);
+    } finally {
+      await queryRunner.release();
+    }
+  }
+
+  async changeStatus(userId: number, changeStatusDto: ChangeStatusDto) {
+    const { estadoRegistro } = changeStatusDto;
+    const result = await this.userRepository.update(userId, {
+      estadoRegistro,
+    });
+    if (result.affected === 0) {
+      throw new NotFoundException(`Usuario con ID "${userId}" no encontrado.`);
+    }
+    return { message: `Estado del usuario actualizado a ${estadoRegistro}.` };
+  }
+
+  async assignRoles(
+    userId: number,
+    assignRolesDto: AssignRolesDto,
+  ): Promise<{ message: string }> {
+    const { perfilesIds } = assignRolesDto;
+
+    const user = await this.userRepository.findOneBy({ id: userId });
+    if (!user) {
+      throw new NotFoundException(`Usuario con ID "${userId}" no encontrado.`);
+    }
+
+    const perfiles = await this.perfilRepository.findBy({
+      id: In(perfilesIds),
+    });
+
+    if (perfiles.length !== perfilesIds.length) {
+      throw new BadRequestException('Uno o más IDs de perfil no son válidos.');
+    }
+
+    const queryRunner = this.dataSource.createQueryRunner();
+    await queryRunner.connect();
+    await queryRunner.startTransaction();
+
+    try {
+      await queryRunner.manager.delete(UsuarioPerfil, { idUsuario: userId });
       const newUserProfiles = perfiles.map((perfil) =>
         this.usuarioPerfilRepository.create({
           idUsuario: userId,
@@ -253,8 +353,8 @@ export class AuthService {
 
   private buildMenuHierarchy(
     options: OpcionMenu[],
-    parentId: string | null = null,
-    visited = new Set<string>(),
+    parentId: number | null = null,
+    visited = new Set<number>(),
   ): any[] {
     const hierarchy: any[] = [];
     // La lógica de ordenamiento ya se aplicó, así que aquí solo filtramos.
@@ -276,6 +376,25 @@ export class AuthService {
       visited.delete(child.id);
     }
     return hierarchy;
+  }
+
+  private _buildUserResponse(user: Usuario) {
+    const perfiles =
+      user.perfilesLink?.map((link) => link.perfil?.nombre) || [];
+
+    return {
+      id: user.id,
+      dni: user.dni,
+      nombres: user.nombres,
+      apellidoPaterno: user.apellidoPaterno,
+      apellidoMaterno: user.apellidoMaterno,
+      celular: user.celular,
+      correoElectronico: user.correoElectronico,
+      estadoRegistro: user.estadoRegistro,
+      fechaCreacion: user.fechaCreacion,
+      fechaModificacion: user.fechaModificacion,
+      perfiles: perfiles,
+    };
   }
 
   private getJwtToken(payload: JwtPayLoad) {

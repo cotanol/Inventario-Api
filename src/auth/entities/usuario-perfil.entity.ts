@@ -5,11 +5,11 @@ import { Usuario } from './usuario.entity';
 
 @Entity('usuarios_perfiles')
 export class UsuarioPerfil {
-  @PrimaryColumn('uuid', { name: 'id_usuario' })
-  idUsuario: string;
+  @PrimaryColumn('int', { name: 'id_usuario' })
+  idUsuario: number;
 
-  @PrimaryColumn('uuid', { name: 'id_perfil' })
-  idPerfil: string;
+  @PrimaryColumn('int', { name: 'id_perfil' })
+  idPerfil: number;
 
   @Column('boolean', { name: 'estado_registro', default: true })
   estadoRegistro: boolean;

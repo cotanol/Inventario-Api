@@ -1,5 +1,5 @@
 interface SeedUsuario {
-  id: string;
+  id: number;
   nombres: string;
   apellidoPaterno: string;
   apellidoMaterno?: string;
@@ -10,28 +10,28 @@ interface SeedUsuario {
 }
 
 interface SeedPerfil {
-  id: string;
+  id: number;
   nombre: string;
   descripcion?: string;
 }
 
 interface SeedOpcionMenu {
-  id: string;
+  id: number;
   nombre: string;
   urlMenu: string;
   descripcion?: string;
-  idPadre?: string;
+  idPadre?: number;
 }
 
 interface SeedOpcionMenuPerfil {
-  idOpcionMenu: string;
-  idPerfil: string;
+  idOpcionMenu: number;
+  idPerfil: number;
   orden: number;
 }
 
 interface SeedUsuarioPerfil {
-  idUsuario: string;
-  idPerfil: string;
+  idUsuario: number;
+  idPerfil: number;
 }
 
 interface SeedData {
@@ -42,27 +42,24 @@ interface SeedData {
   usuariosPerfiles: SeedUsuarioPerfil[];
 }
 
-// --- Mapeo de IDs de Excel a UUIDs generados ---
-// Usuarios
-const user1Id = 'd21eb72f-6e46-4213-9701-9bb153a5f0e5'; // Carlos Rodriguez
-const user2Id = 'fff08557-7ded-4da4-b176-6020edbe6c07'; // Jose Rios
-const user3Id = '4b8c0180-197f-47ee-b811-e6a6c37bcf3d'; // Roberto Diaz
+// IDs numéricos incrementales
+const user1Id = 1; // Carlos Rodriguez
+const user2Id = 2; // Jose Rios
+const user3Id = 3; // Roberto Diaz
 
-// Perfiles
-const perfilAdminId = 'cf09d342-aed7-4618-a5f2-b1f461d82b70'; // Administrador
-export const perfilTecnicoId = 'adc5f58c-33f2-4ab7-a742-5961f9544a40'; // Tecnico
+const perfilAdminId = 1; // Administrador
+export const perfilTecnicoId = 2; // Tecnico
 
-// Opciones de Menu
-const menuMantenimientoId = 'c63c4227-290d-46de-8da8-eca58ca06874';
-const menuTipoServicioId = '9648cad5-c42e-482b-8b52-fa08072a0c87';
-const menuFallasId = '96046421-6f01-4525-9d8a-c744630ebe63';
-const menuTipoAsistenciaId = 'f893261a-c55f-45eb-9955-b9b1d8786362';
-const menuDetalleTrabajoId = 'e7b1bee5-609b-4a09-8d8f-b6ed26c66a5c';
-const menuTrabajosId = 'feb29846-92df-40d7-863c-ba586c2514f0';
-const menuOrdenesTrabajoId = '8712cbeb-8cf7-4184-bdbb-7611e5444a4b';
-const menuRegistrarTrabajoId = '1de3811f-35fe-4bc5-bf55-74ada2f1cd2a';
-const menuUsuariosId = '19556152-df64-43b3-89aa-e9594bf312e7';
-const menuLugaresAtencionId = 'dff9cb6e-32c2-4f58-b4f2-3b4536b19a99';
+const menuMantenimientoId = 1;
+const menuTipoServicioId = 2;
+const menuFallasId = 3;
+const menuTipoAsistenciaId = 4;
+const menuDetalleTrabajoId = 5;
+const menuTrabajosId = 6;
+const menuOrdenesTrabajoId = 7;
+const menuRegistrarTrabajoId = 8;
+const menuUsuariosId = 9;
+const menuLugaresAtencionId = 10;
 
 export const initialData: SeedData = {
   usuarios: [
@@ -71,7 +68,7 @@ export const initialData: SeedData = {
       nombres: 'Carlos',
       apellidoPaterno: 'Rodriguez',
       dni: '99999999',
-      correoElectronico: 'crodriguez@gmail.com',
+      correoElectronico: 'admin@gmail.com',
       clave: 'admin@123A',
     },
     {
@@ -82,7 +79,7 @@ export const initialData: SeedData = {
       dni: '56879828',
       celular: '923876122',
       correoElectronico: 'jrios@gmail.com',
-      clave: '112233',
+      clave: 'tecnico@123A',
     },
     {
       id: user3Id,
@@ -92,7 +89,7 @@ export const initialData: SeedData = {
       dni: '90157845',
       celular: '987456100',
       correoElectronico: 'rdiaz@gmail.com',
-      clave: '998811',
+      clave: 'tecnico@123B',
     },
   ],
   perfiles: [
