@@ -1,5 +1,5 @@
 export interface JwtPayLoad {
-  id: number;
+  usuarioId: number;
 }
 
 // TODO: agregar mas campos al payload

@@ -6,10 +6,9 @@ import {
   Param,
   ParseIntPipe,
   Patch,
-  Delete,
 } from '@nestjs/common';
 import { AuthService } from './auth.service';
-import { AssignRolesDto, CreateUserDto, LoginUserDto } from './dto';
+import { CreateUserDto, LoginUserDto } from './dto';
 
 import { GetUser } from './decorators/get-user.decorator';
 import { Usuario } from './entities/usuario.entity';
@@ -90,54 +89,6 @@ export class AuthController {
   @Auth()
   checkAuthStatus(@GetUser() user: Usuario) {
     return this.authService.checkAuthStatus(user);
-  }
-
-  @Get('test-auth-private')
-  @ApiOperation({
-    summary: 'Ruta de prueba protegida',
-    description:
-      'Endpoint de prueba para verificar que la autenticación y la restricción por roles funcionan correctamente. Solo accesible para roles "tecnico".',
-  })
-  @ApiBearerAuth()
-  @ApiResponse({ status: 200, description: 'Acceso concedido.' })
-  @ApiResponse({
-    status: 403,
-    description: 'Forbidden: No tienes el rol requerido.',
-  })
-  @Auth(ValidRoles.tecnico)
-  test(@GetUser() user: Usuario) {
-    return {
-      message: 'Test private endpoint',
-      user,
-    };
-  }
-
-  @Post('assign-roles/:id')
-  @ApiOperation({
-    summary: 'Asignar o actualizar roles de un usuario',
-    description:
-      'Permite a un administrador modificar los perfiles asignados a un usuario existente.',
-  })
-  @ApiBearerAuth()
-  @ApiResponse({ status: 200, description: 'Roles asignados correctamente.' })
-  @ApiResponse({
-    status: 400,
-    description: 'Bad Request: Uno o más IDs de perfil no son válidos.',
-  })
-  @ApiResponse({
-    status: 403,
-    description: 'Forbidden: No tienes permisos de administrador.',
-  })
-  @ApiResponse({
-    status: 404,
-    description: 'Not Found: Usuario no encontrado.',
-  })
-  @Auth(ValidRoles.admin)
-  assignRoles(
-    @Param('id', ParseIntPipe) id: number,
-    @Body() assignRolesDto: AssignRolesDto,
-  ) {
-    return this.authService.assignRoles(id, assignRolesDto);
   }
 
   //  MENÚ DINÁMICO ---
@@ -275,26 +226,5 @@ export class AuthController {
     @Body() updateUserDto: UpdateUserDto,
   ) {
     return this.authService.updateUser(id, updateUserDto);
-  }
-
-  @Delete('delete-user/:id')
-  @ApiOperation({
-    summary: 'Eliminar un usuario',
-    description:
-      'Permite eliminar un usuario existente del sistema. Requiere rol de administrador.',
-  })
-  @ApiBearerAuth()
-  @ApiResponse({ status: 200, description: 'Usuario eliminado correctamente.' })
-  @ApiResponse({
-    status: 403,
-    description: 'Forbidden: No tienes permisos de administrador.',
-  })
-  @ApiResponse({
-    status: 404,
-    description: 'Not Found: Usuario no encontrado.',
-  })
-  @Auth(ValidRoles.admin)
-  remove(@Param('id', ParseIntPipe) id: number) {
-    return this.authService.remove(id);
   }
 }

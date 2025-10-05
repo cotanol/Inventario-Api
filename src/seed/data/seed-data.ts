@@ -1,5 +1,5 @@
 interface SeedUsuario {
-  id: number;
+  usuarioId: number;
   nombres: string;
   apellidoPaterno: string;
   apellidoMaterno?: string;
@@ -10,28 +10,28 @@ interface SeedUsuario {
 }
 
 interface SeedPerfil {
-  id: number;
+  perfilId: number;
   nombre: string;
   descripcion?: string;
 }
 
 interface SeedOpcionMenu {
-  id: number;
+  opcionMenuId: number;
   nombre: string;
   urlMenu: string;
   descripcion?: string;
-  idPadre?: number;
+  opcionMenuPadreId?: number;
 }
 
 interface SeedOpcionMenuPerfil {
-  idOpcionMenu: number;
-  idPerfil: number;
+  opcionMenuId: number;
+  perfilId: number;
   orden: number;
 }
 
 interface SeedUsuarioPerfil {
-  idUsuario: number;
-  idPerfil: number;
+  usuarioId: number;
+  perfilId: number;
 }
 
 interface SeedData {
@@ -64,7 +64,7 @@ const menuLugaresAtencionId = 10;
 export const initialData: SeedData = {
   usuarios: [
     {
-      id: user1Id,
+      usuarioId: user1Id,
       nombres: 'Carlos',
       apellidoPaterno: 'Rodriguez',
       dni: '99999999',
@@ -72,7 +72,7 @@ export const initialData: SeedData = {
       clave: 'admin@123A',
     },
     {
-      id: user2Id,
+      usuarioId: user2Id,
       nombres: 'Jose',
       apellidoPaterno: 'Rios',
       apellidoMaterno: 'Martinez',
@@ -82,7 +82,7 @@ export const initialData: SeedData = {
       clave: 'tecnico@123A',
     },
     {
-      id: user3Id,
+      usuarioId: user3Id,
       nombres: 'Roberto',
       apellidoPaterno: 'Diaz',
       apellidoMaterno: 'Guerrero',
@@ -94,92 +94,92 @@ export const initialData: SeedData = {
   ],
   perfiles: [
     {
-      id: perfilAdminId,
+      perfilId: perfilAdminId,
       nombre: 'administrador',
     },
     {
-      id: perfilTecnicoId,
+      perfilId: perfilTecnicoId,
       nombre: 'tecnico',
     },
   ],
   opcionesMenu: [
     {
-      id: menuMantenimientoId,
+      opcionMenuId: menuMantenimientoId,
       nombre: 'Mantenimiento',
       urlMenu: '/',
     },
     {
-      id: menuTipoServicioId,
+      opcionMenuId: menuTipoServicioId,
       nombre: 'Tipo Servicio',
       urlMenu: 'home/TipoServicio',
-      idPadre: menuMantenimientoId,
+      opcionMenuPadreId: menuMantenimientoId,
     },
     {
-      id: menuFallasId,
+      opcionMenuId: menuFallasId,
       nombre: 'Fallas',
       urlMenu: 'home/Fallas',
-      idPadre: menuMantenimientoId,
+      opcionMenuPadreId: menuMantenimientoId,
     },
     {
-      id: menuTipoAsistenciaId,
+      opcionMenuId: menuTipoAsistenciaId,
       nombre: 'Tipo Asistencia',
       urlMenu: 'home/TipoAsistencia',
-      idPadre: menuMantenimientoId,
+      opcionMenuPadreId: menuMantenimientoId,
     },
     {
-      id: menuDetalleTrabajoId,
+      opcionMenuId: menuDetalleTrabajoId,
       nombre: 'Detalle Trabajo',
       urlMenu: 'home/DetalleTrabajo',
-      idPadre: menuMantenimientoId,
+      opcionMenuPadreId: menuMantenimientoId,
     },
     {
-      id: menuTrabajosId,
+      opcionMenuId: menuTrabajosId,
       nombre: 'Trabajos',
       urlMenu: '/',
     },
     {
-      id: menuOrdenesTrabajoId,
+      opcionMenuId: menuOrdenesTrabajoId,
       nombre: 'Ordenes de Trabajo',
       urlMenu: 'home/OrdenesTrabajo',
-      idPadre: menuTrabajosId,
+      opcionMenuPadreId: menuTrabajosId,
     },
     {
-      id: menuRegistrarTrabajoId,
+      opcionMenuId: menuRegistrarTrabajoId,
       nombre: 'Registrar Trabajo',
       urlMenu: 'home/RegistrarTrabajo',
     },
     {
-      id: menuUsuariosId,
+      opcionMenuId: menuUsuariosId,
       nombre: 'Usuarios',
       urlMenu: 'home/Usuarios',
-      idPadre: menuMantenimientoId,
+      opcionMenuPadreId: menuMantenimientoId,
     },
     {
-      id: menuLugaresAtencionId,
+      opcionMenuId: menuLugaresAtencionId,
       nombre: 'Lugares de atencion',
       urlMenu: 'home/LugaresAtencion',
-      idPadre: menuMantenimientoId,
+      opcionMenuPadreId: menuMantenimientoId,
     },
   ],
   usuariosPerfiles: [
-    { idUsuario: user1Id, idPerfil: perfilAdminId },
-    { idUsuario: user2Id, idPerfil: perfilTecnicoId },
-    { idUsuario: user3Id, idPerfil: perfilTecnicoId },
+    { usuarioId: user1Id, perfilId: perfilAdminId },
+    { usuarioId: user2Id, perfilId: perfilTecnicoId },
+    { usuarioId: user3Id, perfilId: perfilTecnicoId },
   ],
   opcionesMenuPerfiles: [
-    { idOpcionMenu: menuMantenimientoId, idPerfil: perfilAdminId, orden: 1 },
-    { idOpcionMenu: menuTipoServicioId, idPerfil: perfilAdminId, orden: 2 },
-    { idOpcionMenu: menuFallasId, idPerfil: perfilAdminId, orden: 3 },
-    { idOpcionMenu: menuTipoAsistenciaId, idPerfil: perfilAdminId, orden: 4 },
-    { idOpcionMenu: menuDetalleTrabajoId, idPerfil: perfilAdminId, orden: 5 },
-    { idOpcionMenu: menuTrabajosId, idPerfil: perfilAdminId, orden: 1 },
-    { idOpcionMenu: menuOrdenesTrabajoId, idPerfil: perfilAdminId, orden: 2 },
+    { opcionMenuId: menuMantenimientoId, perfilId: perfilAdminId, orden: 1 },
+    { opcionMenuId: menuTipoServicioId, perfilId: perfilAdminId, orden: 2 },
+    { opcionMenuId: menuFallasId, perfilId: perfilAdminId, orden: 3 },
+    { opcionMenuId: menuTipoAsistenciaId, perfilId: perfilAdminId, orden: 4 },
+    { opcionMenuId: menuDetalleTrabajoId, perfilId: perfilAdminId, orden: 5 },
+    { opcionMenuId: menuTrabajosId, perfilId: perfilAdminId, orden: 1 },
+    { opcionMenuId: menuOrdenesTrabajoId, perfilId: perfilAdminId, orden: 2 },
     {
-      idOpcionMenu: menuRegistrarTrabajoId,
-      idPerfil: perfilTecnicoId,
+      opcionMenuId: menuRegistrarTrabajoId,
+      perfilId: perfilTecnicoId,
       orden: 1,
     },
-    { idOpcionMenu: menuUsuariosId, idPerfil: perfilAdminId, orden: 6 },
-    { idOpcionMenu: menuLugaresAtencionId, idPerfil: perfilAdminId, orden: 7 },
+    { opcionMenuId: menuUsuariosId, perfilId: perfilAdminId, orden: 6 },
+    { opcionMenuId: menuLugaresAtencionId, perfilId: perfilAdminId, orden: 7 },
   ],
 };

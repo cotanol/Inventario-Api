@@ -6,7 +6,7 @@ import {
   NotFoundException,
   UnauthorizedException,
 } from '@nestjs/common';
-import { AssignRolesDto, CreateUserDto } from './dto';
+import { CreateUserDto } from './dto';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Usuario } from './entities/usuario.entity';
 import { DataSource, In, Repository } from 'typeorm';
@@ -57,7 +57,7 @@ export class AuthService {
 
       // 3. Verificamos que los perfiles enviados existan.
       const perfiles = await this.perfilRepository.findBy({
-        id: In(perfilesIds),
+        perfilId: In(perfilesIds),
       });
       if (perfiles.length !== perfilesIds.length) {
         throw new BadRequestException(
@@ -68,8 +68,8 @@ export class AuthService {
       // 4. Creamos los registros en la tabla pivote 'usuarios_perfiles'.
       const userProfiles = perfiles.map((perfil) =>
         this.usuarioPerfilRepository.create({
-          idUsuario: user.id,
-          idPerfil: perfil.id,
+          usuarioId: user.usuarioId,
+          perfilId: perfil.perfilId,
         }),
       );
       // Guardamos las relaciones de perfil dentro de la transacción
@@ -78,9 +78,9 @@ export class AuthService {
       // 5. Si todo salió bien, confirmamos la transacción.
       await queryRunner.commitTransaction();
 
-      const token = this.getJwtToken({ id: user.id });
+      const token = this.getJwtToken({ usuarioId: user.usuarioId });
       const newUser = await this.userRepository.findOne({
-        where: { id: user.id },
+        where: { usuarioId: user.usuarioId },
         relations: ['perfilesLink', 'perfilesLink.perfil'],
       });
 
@@ -110,7 +110,7 @@ export class AuthService {
     const user = await this.userRepository.findOne({
       where: { correoElectronico: emailLower },
       select: {
-        id: true,
+        usuarioId: true,
         dni: true,
         nombres: true,
         apellidoPaterno: true,
@@ -132,7 +132,7 @@ export class AuthService {
     if (!isPasswordValid) {
       throw new UnauthorizedException('Invalid credentials');
     }
-    const token = this.getJwtToken({ id: user.id });
+    const token = this.getJwtToken({ usuarioId: user.usuarioId });
 
     return {
       user: this._buildUserResponse(user),
@@ -141,7 +141,7 @@ export class AuthService {
   }
 
   async checkAuthStatus(user: Usuario) {
-    const token = this.getJwtToken({ id: user.id });
+    const token = this.getJwtToken({ usuarioId: user.usuarioId });
 
     return {
       user: this._buildUserResponse(user),
@@ -159,7 +159,7 @@ export class AuthService {
 
   async findUserById(id: number) {
     const user = await this.userRepository.findOne({
-      where: { id },
+      where: { usuarioId: id },
       relations: ['perfilesLink', 'perfilesLink.perfil'],
     });
     if (!user) {
@@ -178,22 +178,6 @@ export class AuthService {
     return users.map((user) => this._buildUserResponse(user));
   }
 
-  async remove(id: number) {
-    const user = await this.userRepository.findOneBy({ id });
-    if (!user) {
-      throw new NotFoundException(`Usuario con ID "${id}" no encontrado.`);
-    }
-
-    await this.usuarioPerfilRepository.delete({ idUsuario: id });
-
-    const result = await this.userRepository.delete(id);
-    if (result.affected === 0) {
-      throw new NotFoundException(`Usuario con ID "${id}" no encontrado.`);
-    }
-
-    return { message: 'Usuario eliminado correctamente.' };
-  }
-
   async updateUser(id: number, updateUserDto: UpdateUserDto) {
     const { perfilesIds, ...userDataToUpdate } = updateUserDto;
 
@@ -202,7 +186,9 @@ export class AuthService {
     await queryRunner.startTransaction();
 
     try {
-      const user = await queryRunner.manager.findOneBy(Usuario, { id });
+      const user = await queryRunner.manager.findOneBy(Usuario, {
+        usuarioId: id,
+      });
       if (!user) {
         throw new NotFoundException(`Usuario con ID "${id}" no encontrado.`);
       }
@@ -214,7 +200,7 @@ export class AuthService {
 
       if (perfilesIds) {
         const perfiles = await this.perfilRepository.findBy({
-          id: In(perfilesIds),
+          perfilId: In(perfilesIds),
         });
         if (perfiles.length !== perfilesIds.length) {
           throw new BadRequestException(
@@ -222,12 +208,12 @@ export class AuthService {
           );
         }
 
-        await queryRunner.manager.delete(UsuarioPerfil, { idUsuario: id });
+        await queryRunner.manager.delete(UsuarioPerfil, { usuarioId: id });
 
         const newUserProfiles = perfiles.map((perfil) =>
           this.usuarioPerfilRepository.create({
-            idUsuario: id,
-            idPerfil: perfil.id,
+            usuarioId: id,
+            perfilId: perfil.perfilId,
           }),
         );
         await queryRunner.manager.save(newUserProfiles);
@@ -236,7 +222,7 @@ export class AuthService {
       await queryRunner.commitTransaction();
 
       const updatedUserWithRelations = await this.userRepository.findOne({
-        where: { id },
+        where: { usuarioId: id },
         relations: ['perfilesLink', 'perfilesLink.perfil'],
       });
 
@@ -266,97 +252,68 @@ export class AuthService {
     return { message: `Estado del usuario actualizado a ${estadoRegistro}.` };
   }
 
-  async assignRoles(
-    userId: number,
-    assignRolesDto: AssignRolesDto,
-  ): Promise<{ message: string }> {
-    const { perfilesIds } = assignRolesDto;
-
-    const user = await this.userRepository.findOneBy({ id: userId });
-    if (!user) {
-      throw new NotFoundException(`Usuario con ID "${userId}" no encontrado.`);
-    }
-
-    const perfiles = await this.perfilRepository.findBy({
-      id: In(perfilesIds),
-    });
-
-    if (perfiles.length !== perfilesIds.length) {
-      throw new BadRequestException('Uno o más IDs de perfil no son válidos.');
-    }
-
-    const queryRunner = this.dataSource.createQueryRunner();
-    await queryRunner.connect();
-    await queryRunner.startTransaction();
-
-    try {
-      await queryRunner.manager.delete(UsuarioPerfil, { idUsuario: userId });
-      const newUserProfiles = perfiles.map((perfil) =>
-        this.usuarioPerfilRepository.create({
-          idUsuario: userId,
-          idPerfil: perfil.id,
-        }),
-      );
-      await queryRunner.manager.save(newUserProfiles);
-
-      // 3c. Confirma la transacción
-      await queryRunner.commitTransaction();
-      return {
-        message: `Roles para el usuario ${user.nombres} actualizados correctamente.`,
-      };
-    } catch (error) {
-      await queryRunner.rollbackTransaction();
-      throw this.handleDBError(error);
-    } finally {
-      await queryRunner.release();
-    }
-  }
-
   // --- FUNCIÓN OPTIMIZADA Y CON ORDENAMIENTO ---
   async getMenuForUser(user: Usuario): Promise<any[]> {
-    const rawMenuItems = await this.opcionMenuRepository
-      .createQueryBuilder('opcionMenu')
-      // --- CORRECCIÓN: Selección explícita de columnas con alias en camelCase ---
-      .select([
-        'opcionMenu.id AS id',
-        'opcionMenu.nombre AS nombre',
-        'opcionMenu.urlMenu AS "urlMenu"', // Las mayúsculas en el alias requieren comillas
-        'opcionMenu.descripcion AS descripcion',
-        'opcionMenu.estadoRegistro AS "estadoRegistro"',
-        'opcionMenu.idPadre AS "idPadre"',
-        'omp.orden AS orden',
-      ])
-      .innerJoin('opcionMenu.perfilesLink', 'omp')
-      .innerJoin('omp.perfil', 'perfil')
-      .innerJoin('perfil.usuariosLink', 'up')
-      .where('up.idUsuario = :userId', { userId: user.id })
-      .getRawMany();
+    // Método alternativo: Usar find con relaciones en lugar de QueryBuilder
+    const userWithMenus = await this.userRepository.findOne({
+      where: { usuarioId: user.usuarioId },
+      relations: [
+        'perfilesLink',
+        'perfilesLink.perfil',
+        'perfilesLink.perfil.opcionesMenuLink',
+        'perfilesLink.perfil.opcionesMenuLink.opcionMenu',
+      ],
+    });
 
-    if (rawMenuItems.length === 0) {
+    if (!userWithMenus || !userWithMenus.perfilesLink?.length) {
       return [];
     }
 
-    // El resto de la lógica funcionará perfectamente con los objetos limpios que ahora recibe.
+    // Extraer opciones de menú de todos los perfiles del usuario
+    const menuOptions: any[] = [];
+    userWithMenus.perfilesLink.forEach((userProfile) => {
+      if (userProfile.perfil && userProfile.perfil.opcionesMenuLink) {
+        userProfile.perfil.opcionesMenuLink.forEach((menuProfile) => {
+          if (menuProfile.opcionMenu && menuProfile.opcionMenu.estadoRegistro) {
+            menuOptions.push({
+              id: menuProfile.opcionMenu.opcionMenuId,
+              nombre: menuProfile.opcionMenu.nombre,
+              urlMenu: menuProfile.opcionMenu.urlMenu,
+              descripcion: menuProfile.opcionMenu.descripcion,
+              estadoRegistro: menuProfile.opcionMenu.estadoRegistro,
+              idPadre: menuProfile.opcionMenu.opcionMenuPadreId,
+              orden: menuProfile.orden,
+            });
+          }
+        });
+      }
+    });
+
+    if (menuOptions.length === 0) {
+      return [];
+    }
+
+    // Eliminar duplicados y ordenar
     const menuOptionsMap = new Map<string, any>();
-    for (const item of rawMenuItems) {
+    for (const item of menuOptions) {
       const existingItem = menuOptionsMap.get(item.id);
       if (!existingItem || item.orden < existingItem.orden) {
         menuOptionsMap.set(item.id, item);
       }
     }
     const allOptions = Array.from(menuOptionsMap.values());
-
     allOptions.sort((a, b) => a.orden - b.orden);
 
     return this.buildMenuHierarchy(allOptions);
   }
 
   private buildMenuHierarchy(
-    options: OpcionMenu[],
+    options: any[], // Cambiado de OpcionMenu[] a any[]
     parentId: number | null = null,
     visited = new Set<number>(),
   ): any[] {
     const hierarchy: any[] = [];
+
     // La lógica de ordenamiento ya se aplicó, así que aquí solo filtramos.
     const children = options.filter((opt) => opt.idPadre === parentId);
 
@@ -375,6 +332,7 @@ export class AuthService {
       hierarchy.push(node);
       visited.delete(child.id);
     }
+
     return hierarchy;
   }
 
@@ -383,7 +341,7 @@ export class AuthService {
       user.perfilesLink?.map((link) => link.perfil?.nombre) || [];
 
     return {
-      id: user.id,
+      usuarioId: user.usuarioId,
       dni: user.dni,
       nombres: user.nombres,
       apellidoPaterno: user.apellidoPaterno,

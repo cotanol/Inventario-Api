@@ -12,8 +12,8 @@ import { UsuarioPerfil } from './usuario-perfil.entity';
 
 @Entity('usuarios')
 export class Usuario {
-  @PrimaryGeneratedColumn()
-  id: number;
+  @PrimaryGeneratedColumn({ name: 'usuario_id' })
+  usuarioId: number;
 
   @Column('varchar', { name: 'dni', length: 15 })
   dni: string;
@@ -39,6 +39,7 @@ export class Usuario {
   @Column('boolean', { name: 'estado_registro', default: true })
   estadoRegistro: boolean;
 
+  // --- Auditoría ---
   @CreateDateColumn({ name: 'fecha_creacion', type: 'timestamptz' })
   fechaCreacion: Date;
 
@@ -46,29 +47,11 @@ export class Usuario {
     name: 'fecha_modificacion',
     type: 'timestamptz',
     nullable: true,
+    onUpdate: 'CURRENT_TIMESTAMP',
   })
   fechaModificacion: Date;
 
   // --- Relaciones ---
   @OneToMany(() => UsuarioPerfil, (usuarioPerfil) => usuarioPerfil.usuario)
   perfilesLink: UsuarioPerfil[];
-
-  // --- Auditoría ---
-  // @ManyToOne(() => Usuario, { nullable: true })
-  // @JoinColumn({ name: 'UsuarioCreacion' })
-  // usuarioCreacion: Usuario;
-
-  // @CreateDateColumn({ name: 'FechaCreacion', type: 'timestamp' })
-  // fechaCreacion: Date;
-
-  // @ManyToOne(() => Usuario, { nullable: true })
-  // @JoinColumn({ name: 'UsuarioModificacion' })
-  // usuarioModificacion: Usuario;
-
-  // @UpdateDateColumn({
-  //   name: 'FechaModificacion',
-  //   type: 'timestamp',
-  //   nullable: true,
-  // })
-  // fechaModificacion: Date;
 }
