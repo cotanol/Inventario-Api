@@ -17,6 +17,7 @@ import {
   UpdateMarcaDto,
   CreateProductoDto,
   UpdateProductoDto,
+  ChangeStatusDto,
 } from './dto';
 
 @Controller('catalogo')
@@ -47,9 +48,12 @@ export class CatalogoController {
     return this.catalogoService.updateLinea(id, updateLineaDto);
   }
 
-  @Patch('lineas/:id/toggle-status')
-  toggleLineaStatus(@Param('id', ParseIntPipe) id: number) {
-    return this.catalogoService.toggleLineaStatus(id);
+  @Patch('lineas/:id/change-status')
+  changeLineaStatus(
+    @Param('id', ParseIntPipe) id: number,
+    @Body() changeStatusDto: ChangeStatusDto,
+  ) {
+    return this.catalogoService.changeLineaStatus(id, changeStatusDto);
   }
 
   // === ENDPOINTS GRUPOS ===
@@ -81,9 +85,12 @@ export class CatalogoController {
     return this.catalogoService.updateGrupo(id, updateGrupoDto);
   }
 
-  @Patch('grupos/:id/toggle-status')
-  toggleGrupoStatus(@Param('id', ParseIntPipe) id: number) {
-    return this.catalogoService.toggleGrupoStatus(id);
+  @Patch('grupos/:id/change-status')
+  changeGrupoStatus(
+    @Param('id', ParseIntPipe) id: number,
+    @Body() changeStatusDto: ChangeStatusDto,
+  ) {
+    return this.catalogoService.changeGrupoStatus(id, changeStatusDto);
   }
 
   // === ENDPOINTS MARCAS ===
@@ -110,9 +117,12 @@ export class CatalogoController {
     return this.catalogoService.updateMarca(id, updateMarcaDto);
   }
 
-  @Patch('marcas/:id/toggle-status')
-  toggleMarcaStatus(@Param('id', ParseIntPipe) id: number) {
-    return this.catalogoService.toggleMarcaStatus(id);
+  @Patch('marcas/:id/change-status')
+  changeMarcaStatus(
+    @Param('id', ParseIntPipe) id: number,
+    @Body() changeStatusDto: ChangeStatusDto,
+  ) {
+    return this.catalogoService.changeMarcaStatus(id, changeStatusDto);
   }
 
   // === ENDPOINTS PRODUCTOS ===
@@ -139,8 +149,11 @@ export class CatalogoController {
     return this.catalogoService.updateProducto(id, updateProductoDto);
   }
 
-  @Patch('productos/:id/toggle-status')
-  toggleProductoStatus(@Param('id', ParseIntPipe) id: number) {
-    return this.catalogoService.toggleProductoStatus(id);
+  @Patch('productos/:id/change-status')
+  changeProductoStatus(
+    @Param('id', ParseIntPipe) id: number,
+    @Body() changeStatusDto: ChangeStatusDto,
+  ) {
+    return this.catalogoService.changeProductoStatus(id, changeStatusDto);
   }
 }

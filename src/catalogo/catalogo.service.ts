@@ -14,6 +14,7 @@ import {
   UpdateMarcaDto,
   CreateProductoDto,
   UpdateProductoDto,
+  ChangeStatusDto,
 } from './dto';
 import { Linea } from './entities/linea.entity';
 import { Grupo } from './entities/grupo.entity';
@@ -83,7 +84,10 @@ export class CatalogoService {
     }
   }
 
-  async toggleLineaStatus(id: number): Promise<Linea> {
+  async changeLineaStatus(
+    id: number,
+    changeStatusDto: ChangeStatusDto,
+  ): Promise<Linea> {
     const linea = await this.lineaRepository.findOne({
       where: { lineaId: id },
       relations: ['grupos'],
@@ -93,7 +97,7 @@ export class CatalogoService {
       throw new NotFoundException(`Línea con ID ${id} no encontrada`);
     }
 
-    linea.estadoRegistro = !linea.estadoRegistro;
+    linea.estadoRegistro = changeStatusDto.estadoRegistro;
     return await this.lineaRepository.save(linea);
   }
 
@@ -170,7 +174,10 @@ export class CatalogoService {
     }
   }
 
-  async toggleGrupoStatus(id: number): Promise<Grupo> {
+  async changeGrupoStatus(
+    id: number,
+    changeStatusDto: ChangeStatusDto,
+  ): Promise<Grupo> {
     const grupo = await this.grupoRepository.findOne({
       where: { grupoId: id },
       relations: ['linea', 'productos'],
@@ -180,7 +187,7 @@ export class CatalogoService {
       throw new NotFoundException(`Grupo con ID ${id} no encontrado`);
     }
 
-    grupo.estadoRegistro = !grupo.estadoRegistro;
+    grupo.estadoRegistro = changeStatusDto.estadoRegistro;
     return await this.grupoRepository.save(grupo);
   }
 
@@ -234,7 +241,10 @@ export class CatalogoService {
     }
   }
 
-  async toggleMarcaStatus(id: number): Promise<Marca> {
+  async changeMarcaStatus(
+    id: number,
+    changeStatusDto: ChangeStatusDto,
+  ): Promise<Marca> {
     const marca = await this.marcaRepository.findOne({
       where: { marcaId: id },
       relations: ['productos'],
@@ -244,7 +254,7 @@ export class CatalogoService {
       throw new NotFoundException(`Marca con ID ${id} no encontrada`);
     }
 
-    marca.estadoRegistro = !marca.estadoRegistro;
+    marca.estadoRegistro = changeStatusDto.estadoRegistro;
     return await this.marcaRepository.save(marca);
   }
 
@@ -333,7 +343,10 @@ export class CatalogoService {
     }
   }
 
-  async toggleProductoStatus(id: number): Promise<Producto> {
+  async changeProductoStatus(
+    id: number,
+    changeStatusDto: ChangeStatusDto,
+  ): Promise<Producto> {
     const producto = await this.productoRepository.findOne({
       where: { productoId: id },
       relations: ['grupo', 'grupo.linea', 'marca'],
@@ -343,7 +356,7 @@ export class CatalogoService {
       throw new NotFoundException(`Producto con ID ${id} no encontrado`);
     }
 
-    producto.estadoRegistro = !producto.estadoRegistro;
+    producto.estadoRegistro = changeStatusDto.estadoRegistro;
     return await this.productoRepository.save(producto);
   }
 }
