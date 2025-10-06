@@ -24,7 +24,15 @@ export class Producto {
   @Column('text', { name: 'descripcion', nullable: true })
   descripcion: string;
 
-  @Column('decimal', { name: 'precio', precision: 10, scale: 2 })
+  @Column('decimal', {
+    name: 'precio',
+    precision: 10,
+    scale: 2,
+    transformer: {
+      to: (value: number) => value,
+      from: (value: string) => parseFloat(value),
+    },
+  })
   precio: number;
 
   @Column('boolean', { name: 'estado_registro', default: true })

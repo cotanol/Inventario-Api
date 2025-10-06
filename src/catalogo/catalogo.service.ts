@@ -56,7 +56,7 @@ export class CatalogoService {
 
   async findOneLinea(id: number): Promise<Linea> {
     const linea = await this.lineaRepository.findOne({
-      where: { lineaId: id, estadoRegistro: true },
+      where: { lineaId: id },
       relations: ['grupos'],
     });
 
@@ -137,7 +137,7 @@ export class CatalogoService {
 
   async findOneGrupo(id: number): Promise<Grupo> {
     const grupo = await this.grupoRepository.findOne({
-      where: { grupoId: id, estadoRegistro: true },
+      where: { grupoId: id },
       relations: ['linea', 'productos'],
     });
 
@@ -213,7 +213,7 @@ export class CatalogoService {
 
   async findOneMarca(id: number): Promise<Marca> {
     const marca = await this.marcaRepository.findOne({
-      where: { marcaId: id, estadoRegistro: true },
+      where: { marcaId: id },
       relations: ['productos'],
     });
 
@@ -290,7 +290,7 @@ export class CatalogoService {
 
   async findOneProducto(id: number): Promise<Producto> {
     const producto = await this.productoRepository.findOne({
-      where: { productoId: id, estadoRegistro: true },
+      where: { productoId: id },
       relations: ['grupo', 'grupo.linea', 'marca'],
     });
 
