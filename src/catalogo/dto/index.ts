@@ -1,0 +1,8 @@
+export { CreateLineaDto } from './create-linea.dto';
+export { UpdateLineaDto } from './update-linea.dto';
+export { CreateGrupoDto } from './create-grupo.dto';
+export { UpdateGrupoDto } from './update-grupo.dto';
+export { CreateMarcaDto } from './create-marca.dto';
+export { UpdateMarcaDto } from './update-marca.dto';
+export { CreateProductoDto } from './create-producto.dto';
+export { UpdateProductoDto } from './update-producto.dto';
