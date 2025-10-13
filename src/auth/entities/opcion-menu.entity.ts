@@ -18,7 +18,7 @@ export class OpcionMenu {
   @Column('varchar', { name: 'nombre', length: 50 })
   nombre: string;
 
-  @Column('varchar', { name: 'url_menu', length: 50 })
+  @Column('varchar', { name: 'url_menu', length: 50, nullable: true })
   urlMenu: string;
 
   @Column('varchar', { name: 'descripcion', length: 100, nullable: true })

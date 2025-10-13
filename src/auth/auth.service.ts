@@ -19,6 +19,9 @@ import { Perfil } from './entities/perfil.entity';
 import { OpcionMenu } from './entities/opcion-menu.entity';
 import { ChangeStatusDto } from './dto/change-status.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
+import { OpcionMenuPerfil } from './entities/opcion-menu-perfil.entity';
+import { UpdatePerfilDto } from './dto/update-perfil.dto';
+import { CreatePerfilDto } from './dto/create-perfil.dto';
 
 @Injectable()
 export class AuthService {
@@ -30,6 +33,8 @@ export class AuthService {
     private perfilRepository: Repository<Perfil>,
     @InjectRepository(OpcionMenu)
     private opcionMenuRepository: Repository<OpcionMenu>,
+    @InjectRepository(OpcionMenuPerfil)
+    private opcionMenuPerfilRepository: Repository<OpcionMenuPerfil>,
     private dataSource: DataSource,
     private readonly jwtService: JwtService,
   ) {}
@@ -358,6 +363,130 @@ export class AuthService {
   private getJwtToken(payload: JwtPayLoad) {
     const token = this.jwtService.sign(payload);
     return token;
+  }
+
+  /* Perfiles */
+  async createPerfil(createPerfilDto: CreatePerfilDto): Promise<Perfil> {
+    const { nombre, descripcion, opcionesMenu } = createPerfilDto;
+    const queryRunner = this.dataSource.createQueryRunner();
+    await queryRunner.connect();
+    await queryRunner.startTransaction();
+
+    try {
+      const perfil = this.perfilRepository.create({ nombre, descripcion });
+      await queryRunner.manager.save(perfil);
+
+      if (opcionesMenu && opcionesMenu.length > 0) {
+        const opcionesIds = opcionesMenu.map((opt) => opt.opcionMenuId);
+        const opcionesExistentes = await this.opcionMenuRepository.findBy({
+          opcionMenuId: In(opcionesIds),
+        });
+
+        if (opcionesExistentes.length !== opcionesIds.length) {
+          throw new BadRequestException(
+            'Uno o más IDs de opciones de menú no son válidos.',
+          );
+        }
+
+        const enlaces = opcionesMenu.map((opt) =>
+          this.opcionMenuPerfilRepository.create({
+            perfilId: perfil.perfilId,
+            opcionMenuId: opt.opcionMenuId,
+            orden: opt.orden,
+          }),
+        );
+        await queryRunner.manager.save(enlaces);
+      }
+
+      await queryRunner.commitTransaction();
+      return this.findOnePerfil(perfil.perfilId);
+    } catch (error) {
+      await queryRunner.rollbackTransaction();
+      this.handleDBError(error);
+    } finally {
+      await queryRunner.release();
+    }
+  }
+
+  async findOnePerfil(id: number): Promise<Perfil> {
+    const perfil = await this.perfilRepository.findOne({
+      where: { perfilId: id },
+      relations: ['opcionesMenuLink', 'opcionesMenuLink.opcionMenu'],
+    });
+    if (!perfil) {
+      throw new NotFoundException(`Perfil con ID "${id}" no encontrado.`);
+    }
+    return perfil;
+  }
+
+  // El método findAllPerfiles() ya lo tienes, así que está perfecto.
+
+  async updatePerfil(
+    id: number,
+    updatePerfilDto: UpdatePerfilDto,
+  ): Promise<Perfil> {
+    const { nombre, descripcion, opcionesMenu } = updatePerfilDto;
+    const queryRunner = this.dataSource.createQueryRunner();
+    await queryRunner.connect();
+    await queryRunner.startTransaction();
+
+    try {
+      const perfil = await queryRunner.manager.findOneBy(Perfil, {
+        perfilId: id,
+      });
+      if (!perfil) {
+        throw new NotFoundException(`Perfil con ID "${id}" no encontrado.`);
+      }
+
+      queryRunner.manager.merge(Perfil, perfil, { nombre, descripcion });
+      await queryRunner.manager.save(perfil);
+
+      if (opcionesMenu) {
+        await queryRunner.manager.delete(OpcionMenuPerfil, { perfilId: id });
+
+        if (opcionesMenu.length > 0) {
+          const opcionesIds = opcionesMenu.map((opt) => opt.opcionMenuId);
+          const opcionesExistentes = await this.opcionMenuRepository.findBy({
+            opcionMenuId: In(opcionesIds),
+          });
+          if (opcionesExistentes.length !== opcionesIds.length) {
+            throw new BadRequestException(
+              'Uno o más IDs de opciones de menú no son válidos.',
+            );
+          }
+
+          const nuevosEnlaces = opcionesMenu.map((opt) =>
+            this.opcionMenuPerfilRepository.create({
+              perfilId: id,
+              opcionMenuId: opt.opcionMenuId,
+              orden: opt.orden,
+            }),
+          );
+          await queryRunner.manager.save(nuevosEnlaces);
+        }
+      }
+
+      await queryRunner.commitTransaction();
+      return this.findOnePerfil(id);
+    } catch (error) {
+      await queryRunner.rollbackTransaction();
+      this.handleDBError(error);
+    } finally {
+      await queryRunner.release();
+    }
+  }
+
+  async changeStatusPerfil(
+    id: number,
+    changeStatusDto: ChangeStatusDto,
+  ): Promise<{ message: string }> {
+    const { estadoRegistro } = changeStatusDto;
+    const result = await this.perfilRepository.update(id, { estadoRegistro });
+
+    if (result.affected === 0) {
+      throw new NotFoundException(`Perfil con ID "${id}" no encontrado.`);
+    }
+    return { message: `Estado del perfil actualizado correctamente.` };
   }
 
   private handleDBError(error: any): never {

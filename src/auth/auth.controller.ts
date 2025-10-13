@@ -23,6 +23,8 @@ import {
 } from '@nestjs/swagger';
 import { ChangeStatusDto } from './dto/change-status.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
+import { UpdatePerfilDto } from './dto/update-perfil.dto';
+import { CreatePerfilDto } from './dto/create-perfil.dto';
 
 @ApiTags('Auth')
 @Controller('auth')
@@ -226,5 +228,31 @@ export class AuthController {
     @Body() updateUserDto: UpdateUserDto,
   ) {
     return this.authService.updateUser(id, updateUserDto);
+  }
+
+  @Post('perfiles')
+  createPerfil(@Body() createPerfilDto: CreatePerfilDto) {
+    return this.authService.createPerfil(createPerfilDto);
+  }
+
+  @Get('perfiles/:id')
+  findOnePerfil(@Param('id', ParseIntPipe) id: number) {
+    return this.authService.findOnePerfil(id);
+  }
+
+  @Patch('perfiles/:id')
+  updatePerfil(
+    @Param('id', ParseIntPipe) id: number,
+    @Body() updatePerfilDto: UpdatePerfilDto,
+  ) {
+    return this.authService.updatePerfil(id, updatePerfilDto);
+  }
+
+  @Patch('perfiles/:id/change-status')
+  changeStatusPerfil(
+    @Param('id', ParseIntPipe) id: number,
+    @Body() changeStatusDto: ChangeStatusDto,
+  ) {
+    return this.authService.changeStatusPerfil(id, changeStatusDto);
   }
 }
