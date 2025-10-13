@@ -5,6 +5,7 @@ import { AuthModule } from './auth/auth.module';
 import { SeedModule } from './seed/seed.module';
 import { CatalogoModule } from './catalogo/catalogo.module';
 import { InventarioModule } from './inventario/inventario.module';
+import { ClientesModule } from './clientes/clientes.module';
 
 @Module({
   imports: [
@@ -47,6 +48,8 @@ import { InventarioModule } from './inventario/inventario.module';
     CatalogoModule,
 
     InventarioModule,
+
+    ClientesModule,
   ],
 })
 export class AppModule {}
