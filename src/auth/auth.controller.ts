@@ -230,6 +230,11 @@ export class AuthController {
     return this.authService.updateUser(id, updateUserDto);
   }
 
+  @Get('opciones-menu')
+  findAllOpcionesMenu() {
+    return this.authService.findAllOpcionesMenu();
+  }
+
   @Post('perfiles')
   createPerfil(@Body() createPerfilDto: CreatePerfilDto) {
     return this.authService.createPerfil(createPerfilDto);

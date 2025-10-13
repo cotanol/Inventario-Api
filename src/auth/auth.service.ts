@@ -156,9 +156,13 @@ export class AuthService {
 
   async findAllPerfiles(): Promise<Perfil[]> {
     return this.perfilRepository.find({
-      order: {
-        nombre: 'ASC', // Opcional: ordenar alfabéticamente
+      relations: {
+        // Le decimos que dentro de 'opcionesMenuLink', también cargue 'opcionMenu'
+        opcionesMenuLink: {
+          opcionMenu: true,
+        },
       },
+      order: { nombre: 'ASC' },
     });
   }
 
@@ -363,6 +367,13 @@ export class AuthService {
   private getJwtToken(payload: JwtPayLoad) {
     const token = this.jwtService.sign(payload);
     return token;
+  }
+
+  async findAllOpcionesMenu(): Promise<OpcionMenu[]> {
+    return this.opcionMenuRepository.find({
+      where: { estadoRegistro: true }, // Opcional: solo traer los permisos activos
+      order: { nombre: 'ASC' },
+    });
   }
 
   /* Perfiles */
