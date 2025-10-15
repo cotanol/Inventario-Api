@@ -20,6 +20,7 @@ import { Linea } from './entities/linea.entity';
 import { Grupo } from './entities/grupo.entity';
 import { Marca } from './entities/marca.entity';
 import { Producto } from './entities/producto.entity';
+import { Inventario } from 'src/inventario/entities/inventario.entity';
 
 @Injectable()
 export class CatalogoService {
@@ -32,6 +33,8 @@ export class CatalogoService {
     private readonly marcaRepository: Repository<Marca>,
     @InjectRepository(Producto)
     private readonly productoRepository: Repository<Producto>,
+    @InjectRepository(Inventario)
+    private readonly inventarioRepository: Repository<Inventario>,
   ) {}
 
   // === CRUD LÍNEAS ===
@@ -262,15 +265,29 @@ export class CatalogoService {
   async createProducto(
     createProductoDto: CreateProductoDto,
   ): Promise<Producto> {
+    const {
+      cantidadActual,
+      cantidadMinima,
+      grupoId,
+      marcaId,
+      ...datosProducto
+    } = createProductoDto;
+
     // Verificar que el grupo y la marca existen
-    const grupo = await this.findOneGrupo(createProductoDto.grupoId);
-    const marca = await this.findOneMarca(createProductoDto.marcaId);
+    const grupo = await this.findOneGrupo(grupoId);
+    const marca = await this.findOneMarca(marcaId);
 
     try {
+      const nuevoInventario = this.inventarioRepository.create({
+        cantidadActual,
+        cantidadMinima,
+      });
+
       const producto = this.productoRepository.create({
-        ...createProductoDto,
+        ...datosProducto,
         grupo,
         marca,
+        inventario: nuevoInventario,
       });
       return await this.productoRepository.save(producto);
     } catch (error) {
@@ -283,7 +300,7 @@ export class CatalogoService {
 
   async findAllProductos(): Promise<Producto[]> {
     return await this.productoRepository.find({
-      relations: ['grupo', 'grupo.linea', 'marca'],
+      relations: ['grupo', 'grupo.linea', 'marca', 'inventario'],
       order: { nombre: 'ASC' },
     });
   }
@@ -291,7 +308,7 @@ export class CatalogoService {
   async findOneProducto(id: number): Promise<Producto> {
     const producto = await this.productoRepository.findOne({
       where: { productoId: id },
-      relations: ['grupo', 'grupo.linea', 'marca'],
+      relations: ['grupo', 'grupo.linea', 'marca', 'inventario'],
     });
 
     if (!producto) {
@@ -307,32 +324,36 @@ export class CatalogoService {
   ): Promise<Producto> {
     const producto = await this.findOneProducto(id);
 
-    // Si se va a cambiar el grupo, verificar que existe
-    if (
-      updateProductoDto.grupoId &&
-      updateProductoDto.grupoId !== producto.grupo.grupoId
-    ) {
-      const nuevoGrupo = await this.findOneGrupo(updateProductoDto.grupoId);
-      producto.grupo = nuevoGrupo;
+    const { cantidadActual, cantidadMinima, ...datosProducto } =
+      updateProductoDto;
+
+    if (cantidadActual !== undefined) {
+      producto.inventario.cantidadActual = cantidadActual;
+    }
+    if (cantidadMinima !== undefined) {
+      producto.inventario.cantidadMinima = cantidadMinima;
     }
 
-    // Si se va a cambiar la marca, verificar que existe
     if (
-      updateProductoDto.marcaId &&
-      updateProductoDto.marcaId !== producto.marca.marcaId
+      datosProducto.grupoId &&
+      datosProducto.grupoId !== producto.grupo.grupoId
     ) {
-      const nuevaMarca = await this.findOneMarca(updateProductoDto.marcaId);
-      producto.marca = nuevaMarca;
+      producto.grupo = await this.findOneGrupo(datosProducto.grupoId);
+    }
+    if (
+      datosProducto.marcaId &&
+      datosProducto.marcaId !== producto.marca.marcaId
+    ) {
+      producto.marca = await this.findOneMarca(datosProducto.marcaId);
     }
 
     try {
       Object.assign(producto, {
-        codigo: updateProductoDto.codigo ?? producto.codigo,
-        nombre: updateProductoDto.nombre ?? producto.nombre,
-        descripcion: updateProductoDto.descripcion ?? producto.descripcion,
-        precio: updateProductoDto.precio ?? producto.precio,
-        estadoRegistro:
-          updateProductoDto.estadoRegistro ?? producto.estadoRegistro,
+        codigo: datosProducto.codigo ?? producto.codigo,
+        nombre: datosProducto.nombre ?? producto.nombre,
+        descripcion: datosProducto.descripcion ?? producto.descripcion,
+        precio: datosProducto.precio ?? producto.precio,
+        estadoRegistro: datosProducto.estadoRegistro ?? producto.estadoRegistro,
       });
       return await this.productoRepository.save(producto);
     } catch (error) {

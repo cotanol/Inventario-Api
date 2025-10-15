@@ -6,9 +6,11 @@ import {
   UpdateDateColumn,
   ManyToOne,
   JoinColumn,
+  OneToOne,
 } from 'typeorm';
 import { Grupo } from './grupo.entity';
 import { Marca } from './marca.entity';
+import { Inventario } from 'src/inventario/entities/inventario.entity';
 
 @Entity('productos')
 export class Producto {
@@ -59,4 +61,9 @@ export class Producto {
   @ManyToOne(() => Marca, (marca) => marca.productos)
   @JoinColumn({ name: 'marca_id' })
   marca: Marca;
+
+  @OneToOne(() => Inventario, (inventario) => inventario.producto, {
+    cascade: true, // Permite crear/actualizar el inventario junto con el producto
+  })
+  inventario: Inventario;
 }

@@ -8,6 +8,7 @@ import {
   JoinColumn,
   BeforeInsert,
   BeforeUpdate,
+  OneToOne,
 } from 'typeorm';
 import { Producto } from '../../catalogo/entities/producto.entity';
 
@@ -38,29 +39,28 @@ export class Inventario {
   fechaModificacion: Date;
 
   // --- Relaciones ---
-  @ManyToOne(() => Producto)
+  @OneToOne(() => Producto, (producto) => producto.inventario)
   @JoinColumn({ name: 'producto_id' })
   producto: Producto;
 
   // --- Validaciones antes de insertar ---
-  @BeforeInsert()
-  validateBeforeInsert() {
-    if (this.cantidadActual < 1) {
-      throw new Error('La cantidad actual debe ser mayor a 0');
+  private validateQuantities() {
+    if (this.cantidadActual < 0) {
+      throw new Error('La cantidad actual no puede ser un número negativo.');
     }
-    if (this.cantidadMinima < 1) {
-      throw new Error('La cantidad mínima debe ser mayor a 0');
+
+    if (this.cantidadMinima < 0) {
+      throw new Error('La cantidad mínima no puede ser un número negativo.');
     }
   }
 
-  // --- Validaciones antes de actualizar ---
+  @BeforeInsert()
+  runValidationBeforeInsert() {
+    this.validateQuantities();
+  }
+
   @BeforeUpdate()
-  validateBeforeUpdate() {
-    if (this.cantidadActual < 1) {
-      throw new Error('La cantidad actual debe ser mayor a 0');
-    }
-    if (this.cantidadMinima < 1) {
-      throw new Error('La cantidad mínima debe ser mayor a 0');
-    }
+  runValidationBeforeUpdate() {
+    this.validateQuantities();
   }
 }

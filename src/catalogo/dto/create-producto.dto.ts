@@ -6,6 +6,8 @@ import {
   IsBoolean,
   IsNumber,
   IsPositive,
+  Min,
+  IsInt,
 } from 'class-validator';
 
 export class CreateProductoDto {
@@ -35,6 +37,14 @@ export class CreateProductoDto {
   @IsNumber({ maxDecimalPlaces: 2 })
   @IsPositive()
   precio: number;
+
+  @IsInt({ message: 'La cantidad actual debe ser un número entero.' })
+  @Min(0, { message: 'La cantidad actual no puede ser negativa.' })
+  cantidadActual?: number;
+
+  @IsInt({ message: 'La cantidad mínima debe ser un número entero.' })
+  @Min(0, { message: 'La cantidad mínima no puede ser negativa.' })
+  cantidadMinima?: number;
 
   @IsBoolean()
   @IsOptional()
