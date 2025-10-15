@@ -105,47 +105,47 @@ export const initialData: SeedData = {
   opcionesMenu: [
     {
       opcionMenuId: menuMantenimientoId,
-      nombre: 'Mantenimiento',
+      nombre: 'Crear Usuario',
       urlMenu: '/',
     },
     {
       opcionMenuId: menuTipoServicioId,
-      nombre: 'Tipo Servicio',
+      nombre: 'Editar Usuario',
       urlMenu: 'home/TipoServicio',
       opcionMenuPadreId: menuMantenimientoId,
     },
     {
       opcionMenuId: menuFallasId,
-      nombre: 'Fallas',
+      nombre: 'Eliminar Usuario',
       urlMenu: 'home/Fallas',
       opcionMenuPadreId: menuMantenimientoId,
     },
     {
       opcionMenuId: menuTipoAsistenciaId,
-      nombre: 'Tipo Asistencia',
+      nombre: 'Crear Producto',
       urlMenu: 'home/TipoAsistencia',
       opcionMenuPadreId: menuMantenimientoId,
     },
     {
       opcionMenuId: menuDetalleTrabajoId,
-      nombre: 'Detalle Trabajo',
+      nombre: 'Editar Producto',
       urlMenu: 'home/DetalleTrabajo',
       opcionMenuPadreId: menuMantenimientoId,
     },
     {
       opcionMenuId: menuTrabajosId,
-      nombre: 'Trabajos',
+      nombre: 'Eliminar Producto',
       urlMenu: '/',
     },
     {
       opcionMenuId: menuOrdenesTrabajoId,
-      nombre: 'Ordenes de Trabajo',
+      nombre: 'Crear Cliente',
       urlMenu: 'home/OrdenesTrabajo',
       opcionMenuPadreId: menuTrabajosId,
     },
     {
       opcionMenuId: menuRegistrarTrabajoId,
-      nombre: 'Registrar Trabajo',
+      nombre: 'Editar Cliente',
       urlMenu: 'home/RegistrarTrabajo',
     },
     {
@@ -156,7 +156,7 @@ export const initialData: SeedData = {
     },
     {
       opcionMenuId: menuLugaresAtencionId,
-      nombre: 'Lugares de atencion',
+      nombre: 'Eliminar Cliente',
       urlMenu: 'home/LugaresAtencion',
       opcionMenuPadreId: menuMantenimientoId,
     },
