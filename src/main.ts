@@ -28,6 +28,8 @@ async function bootstrap() {
     origin: process.env.FRONTEND_URL || 'http://localhost:3000',
   });
 
+  console.log(`Frontend URL: ${process.env.FRONTEND_URL}`);
+
   await app.listen(process.env.PORT ?? 6040);
 }
 bootstrap();

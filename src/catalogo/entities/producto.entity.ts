@@ -17,8 +17,13 @@ export class Producto {
   @PrimaryGeneratedColumn({ name: 'producto_id' })
   productoId: number;
 
-  @Column('varchar', { name: 'codigo', length: 20, unique: true })
-  codigo: string;
+  @Column('varchar', {
+    name: 'codigo',
+    length: 20,
+    unique: true,
+    nullable: true,
+  })
+  codigo: string | null;
 
   @Column('varchar', { name: 'nombre', length: 100 })
   nombre: string;

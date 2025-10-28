@@ -11,10 +11,10 @@ import {
 } from 'class-validator';
 
 export class CreateProductoDto {
-  @IsString()
-  @IsNotEmpty()
-  @MaxLength(20)
-  codigo: string;
+  // @IsString()
+  // @IsNotEmpty()
+  // @MaxLength(20)
+  // codigo: string;
 
   @IsString()
   @IsNotEmpty()

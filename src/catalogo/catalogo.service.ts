@@ -2,9 +2,10 @@ import {
   Injectable,
   NotFoundException,
   ConflictException,
+  InternalServerErrorException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { DataSource, Repository } from 'typeorm';
 import {
   CreateLineaDto,
   UpdateLineaDto,
@@ -35,6 +36,7 @@ export class CatalogoService {
     private readonly productoRepository: Repository<Producto>,
     @InjectRepository(Inventario)
     private readonly inventarioRepository: Repository<Inventario>,
+    private readonly dataSource: DataSource,
   ) {}
 
   // === CRUD LÍNEAS ===
@@ -277,25 +279,50 @@ export class CatalogoService {
     const grupo = await this.findOneGrupo(grupoId);
     const marca = await this.findOneMarca(marcaId);
 
-    try {
-      const nuevoInventario = this.inventarioRepository.create({
-        cantidadActual,
-        cantidadMinima,
-      });
+    return this.dataSource.transaction(async (manager) => {
+      try {
+        const nuevoInventario = this.inventarioRepository.create({
+          cantidadActual,
+          cantidadMinima,
+        });
 
-      const producto = this.productoRepository.create({
-        ...datosProducto,
-        grupo,
-        marca,
-        inventario: nuevoInventario,
-      });
-      return await this.productoRepository.save(producto);
-    } catch (error) {
-      if (error.code === '23505') {
-        throw new ConflictException('Ya existe un producto con ese código');
+        // 1. CREAR EL PRODUCTO (sin código)
+        const productoTemporal = manager.create(Producto, {
+          ...datosProducto,
+          grupo,
+          marca,
+          inventario: nuevoInventario,
+          codigo: null, // Explícitamente nulo
+        });
+
+        // 2. GUARDAR (Paso 1: Insertar)
+        // Esto le pide a la BD que genere el 'productoId'
+        const productoGuardado = await manager.save(productoTemporal);
+
+        // 3. GENERAR EL CÓDIGO
+        // Usamos padStart(5, '0') para rellenar con ceros.
+        // Ej: 1 -> "00001", 123 -> "00123"
+        const prefijo = 'SLO-';
+        const nuevoCodigo = `${prefijo}${String(productoGuardado.productoId).padStart(5, '0')}`;
+
+        // 4. ACTUALIZAR EL PRODUCTO
+        productoGuardado.codigo = nuevoCodigo;
+
+        // 5. GUARDAR (Paso 2: Actualizar)
+        // TypeORM es inteligente y solo hará un UPDATE del campo 'codigo'
+        return await manager.save(productoGuardado);
+      } catch (error) {
+        // El error '23505' (unique constraint) ahora es casi imposible
+        // que ocurra, pero es bueno mantener la validación.
+        if (error.code === '23505') {
+          throw new ConflictException(
+            'Error de concurrencia al generar el código. Intente de nuevo.',
+          );
+        }
+
+        throw new InternalServerErrorException('Error al crear el producto.');
       }
-      throw error;
-    }
+    });
   }
 
   async findAllProductos(): Promise<Producto[]> {
@@ -349,7 +376,7 @@ export class CatalogoService {
 
     try {
       Object.assign(producto, {
-        codigo: datosProducto.codigo ?? producto.codigo,
+        // codigo: datosProducto.codigo ?? producto.codigo,
         nombre: datosProducto.nombre ?? producto.nombre,
         descripcion: datosProducto.descripcion ?? producto.descripcion,
         precio: datosProducto.precio ?? producto.precio,
