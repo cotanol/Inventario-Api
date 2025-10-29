@@ -40,11 +40,16 @@ export class CreateClienteDto {
 
   @IsString()
   @IsNotEmpty()
-  @MaxLength(30)
+  @MaxLength(50)
   departamento: string;
 
   @IsString()
   @IsNotEmpty()
-  @MaxLength(30)
+  @MaxLength(50)
+  provincia: string;
+
+  @IsString()
+  @IsNotEmpty()
+  @MaxLength(50)
   distrito: string;
 }

@@ -30,10 +30,13 @@ export class Cliente {
   @Column('varchar', { name: 'clasificacion', length: 50 })
   clasificacion: string;
 
-  @Column('varchar', { name: 'departamento', length: 30 })
+  @Column('varchar', { name: 'departamento', length: 50 })
   departamento: string;
 
-  @Column('varchar', { name: 'distrito', length: 30 })
+  @Column('varchar', { name: 'provincia', length: 50 })
+  provincia: string;
+
+  @Column('varchar', { name: 'distrito', length: 50 })
   distrito: string;
 
   @Column('boolean', { name: 'estado_registro', default: true })
