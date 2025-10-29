@@ -63,48 +63,55 @@ const menuMarcasId = 4;
 const menuLineasId = 5;
 const menuGruposId = 6;
 const menuPerfilesId = 7;
+const menuVendedoresId = 8;
 
 // === IDs PERMISOS - ACCIONES DE USUARIOS ===
-const verUsuariosId = 8;
-const crearUsuarioId = 9;
-const editarUsuarioId = 10;
-const eliminarUsuarioId = 11;
+const verUsuariosId = 9;
+const crearUsuarioId = 10;
+const editarUsuarioId = 11;
+const eliminarUsuarioId = 12;
 
 // === IDs PERMISOS - ACCIONES DE PRODUCTOS ===
-const verProductosId = 12;
-const crearProductoId = 13;
-const editarProductoId = 14;
-const eliminarProductoId = 15;
+const verProductosId = 13;
+const crearProductoId = 14;
+const editarProductoId = 15;
+const eliminarProductoId = 16;
 
 // === IDs PERMISOS - ACCIONES DE CLIENTES ===
-const verClientesId = 16;
-const crearClienteId = 17;
-const editarClienteId = 18;
-const eliminarClienteId = 19;
+const verClientesId = 17;
+const crearClienteId = 18;
+const editarClienteId = 19;
+const eliminarClienteId = 20;
 
 // === IDs PERMISOS - ACCIONES DE MARCAS ===
-const verMarcasId = 20;
-const crearMarcaId = 21;
-const editarMarcaId = 22;
-const eliminarMarcaId = 23;
+const verMarcasId = 21;
+const crearMarcaId = 22;
+const editarMarcaId = 23;
+const eliminarMarcaId = 24;
 
 // === IDs PERMISOS - ACCIONES DE LÍNEAS ===
-const verLineasId = 24;
-const crearLineaId = 25;
-const editarLineaId = 26;
-const eliminarLineaId = 27;
+const verLineasId = 25;
+const crearLineaId = 26;
+const editarLineaId = 27;
+const eliminarLineaId = 28;
 
 // === IDs PERMISOS - ACCIONES DE GRUPOS ===
-const verGruposId = 28;
-const crearGrupoId = 29;
-const editarGrupoId = 30;
-const eliminarGrupoId = 31;
+const verGruposId = 29;
+const crearGrupoId = 30;
+const editarGrupoId = 31;
+const eliminarGrupoId = 32;
 
 // === IDs PERMISOS - ACCIONES DE PERFILES ===
-const verPerfilesId = 32;
-const crearPerfilId = 33;
-const editarPerfilId = 34;
-const eliminarPerfilId = 35;
+const verPerfilesId = 33;
+const crearPerfilId = 34;
+const editarPerfilId = 35;
+const eliminarPerfilId = 36;
+
+// === IDs PERMISOS - ACCIONES DE VENDEDORES ===
+const verVendedoresId = 37;
+const crearVendedorId = 38;
+const editarVendedorId = 39;
+const eliminarVendedorId = 40;
 
 export const initialData: SeedData = {
   usuarios: [
@@ -196,6 +203,14 @@ export const initialData: SeedData = {
       tipoPermiso: TipoPermiso.MENU,
       urlMenu: '/perfiles',
       descripcion: 'Gestión de perfiles y permisos',
+    },
+    {
+      permisoId: menuVendedoresId,
+      keyPermiso: 'MENU_VENDEDORES',
+      nombre: 'Vendedores',
+      tipoPermiso: TipoPermiso.MENU,
+      urlMenu: '/vendedores',
+      descripcion: 'Gestión de vendedores',
     },
 
     // ========== ACCIONES DE USUARIOS ==========
@@ -435,6 +450,40 @@ export const initialData: SeedData = {
       permisoPadreId: menuPerfilesId,
       descripcion: 'Permite eliminar perfiles',
     },
+
+    // ========== ACCIONES DE VENDEDORES ==========
+    {
+      permisoId: verVendedoresId,
+      keyPermiso: ValidPermissions.VER_VENDEDORES,
+      nombre: 'Ver Vendedores',
+      tipoPermiso: TipoPermiso.ACCION,
+      permisoPadreId: menuVendedoresId,
+      descripcion: 'Permite visualizar la lista de vendedores',
+    },
+    {
+      permisoId: crearVendedorId,
+      keyPermiso: ValidPermissions.CREAR_VENDEDOR,
+      nombre: 'Crear Vendedor',
+      tipoPermiso: TipoPermiso.ACCION,
+      permisoPadreId: menuVendedoresId,
+      descripcion: 'Permite crear nuevos vendedores',
+    },
+    {
+      permisoId: editarVendedorId,
+      keyPermiso: ValidPermissions.EDITAR_VENDEDOR,
+      nombre: 'Editar Vendedor',
+      tipoPermiso: TipoPermiso.ACCION,
+      permisoPadreId: menuVendedoresId,
+      descripcion: 'Permite modificar vendedores existentes',
+    },
+    {
+      permisoId: eliminarVendedorId,
+      keyPermiso: ValidPermissions.ELIMINAR_VENDEDOR,
+      nombre: 'Eliminar Vendedor',
+      tipoPermiso: TipoPermiso.ACCION,
+      permisoPadreId: menuVendedoresId,
+      descripcion: 'Permite eliminar vendedores',
+    },
   ],
   usuariosPerfiles: [
     { usuarioId: user1Id, perfilId: perfilAdminId },
@@ -450,6 +499,7 @@ export const initialData: SeedData = {
     { permisoId: menuLineasId, perfilId: perfilAdminId, orden: 50 },
     { permisoId: menuGruposId, perfilId: perfilAdminId, orden: 60 },
     { permisoId: menuPerfilesId, perfilId: perfilAdminId, orden: 70 },
+    { permisoId: menuVendedoresId, perfilId: perfilAdminId, orden: 80 },
 
     // Acciones de Usuarios
     { permisoId: verUsuariosId, perfilId: perfilAdminId, orden: 11 },
@@ -492,6 +542,12 @@ export const initialData: SeedData = {
     { permisoId: crearPerfilId, perfilId: perfilAdminId, orden: 72 },
     { permisoId: editarPerfilId, perfilId: perfilAdminId, orden: 73 },
     { permisoId: eliminarPerfilId, perfilId: perfilAdminId, orden: 74 },
+
+    // Acciones de Vendedores
+    { permisoId: verVendedoresId, perfilId: perfilAdminId, orden: 81 },
+    { permisoId: crearVendedorId, perfilId: perfilAdminId, orden: 82 },
+    { permisoId: editarVendedorId, perfilId: perfilAdminId, orden: 83 },
+    { permisoId: eliminarVendedorId, perfilId: perfilAdminId, orden: 84 },
 
     // ========== PERFIL VENDEDOR (SOLO CLIENTES) ==========
     { permisoId: menuClientesId, perfilId: perfilVendedorId, orden: 10 },

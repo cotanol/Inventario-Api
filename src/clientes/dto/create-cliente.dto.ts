@@ -5,6 +5,7 @@ import {
   MaxLength,
   IsOptional,
   Length,
+  IsInt,
 } from 'class-validator';
 
 export class CreateClienteDto {
@@ -52,4 +53,8 @@ export class CreateClienteDto {
   @IsNotEmpty()
   @MaxLength(50)
   distrito: string;
+
+  @IsInt()
+  @IsNotEmpty()
+  vendedorId: number;
 }

@@ -4,7 +4,10 @@ import {
   Entity,
   PrimaryGeneratedColumn,
   UpdateDateColumn,
+  ManyToOne,
+  JoinColumn,
 } from 'typeorm';
+import { Vendedor } from 'src/vendedores/entities/vendedor.entity';
 
 @Entity('clientes')
 export class Cliente {
@@ -41,6 +44,14 @@ export class Cliente {
 
   @Column('boolean', { name: 'estado_registro', default: true })
   estadoRegistro: boolean;
+
+  // --- Relación con Vendedor ---
+  @Column('int', { name: 'vendedor_id' })
+  vendedorId: number;
+
+  @ManyToOne(() => Vendedor, (vendedor) => vendedor.clientes)
+  @JoinColumn({ name: 'vendedor_id' })
+  vendedor: Vendedor;
 
   // --- Auditoría ---
   @CreateDateColumn({ name: 'fecha_creacion', type: 'timestamptz' })

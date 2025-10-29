@@ -6,6 +6,7 @@ import { SeedModule } from './seed/seed.module';
 import { CatalogoModule } from './catalogo/catalogo.module';
 import { InventarioModule } from './inventario/inventario.module';
 import { ClientesModule } from './clientes/clientes.module';
+import { VendedoresModule } from './vendedores/vendedores.module';
 
 @Module({
   imports: [
@@ -37,7 +38,7 @@ import { ClientesModule } from './clientes/clientes.module';
         // --- ¡ESTE ES EL CAMBIO CLAVE! ---
         // Sincroniza automáticamente solo si no estamos en producción.
         synchronize: configService.get<string>('STAGE') !== 'prod',
-        dropSchema: true,
+        // dropSchema: true,
       }),
     }),
 
@@ -50,6 +51,8 @@ import { ClientesModule } from './clientes/clientes.module';
     InventarioModule,
 
     ClientesModule,
+
+    VendedoresModule,
   ],
 })
 export class AppModule {}
