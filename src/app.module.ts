@@ -7,11 +7,22 @@ import { CatalogoModule } from './catalogo/catalogo.module';
 import { InventarioModule } from './inventario/inventario.module';
 import { ClientesModule } from './clientes/clientes.module';
 import { VendedoresModule } from './vendedores/vendedores.module';
+import { ReportsModule } from './reports/reports.module';
+import { PrinterModule } from './printer/printer.module';
+import { ServeStaticModule } from '@nestjs/serve-static';
+import { join } from 'path';
 
 @Module({
   imports: [
     ConfigModule.forRoot({
       isGlobal: true,
+    }),
+
+    ServeStaticModule.forRoot({
+      // __dirname está en dist/ cuando se compila
+      // Subimos 1 nivel: dist/ -> backend/
+      rootPath: join(__dirname, '..', 'public'),
+      serveRoot: '/',
     }),
 
     TypeOrmModule.forRootAsync({
@@ -53,6 +64,10 @@ import { VendedoresModule } from './vendedores/vendedores.module';
     ClientesModule,
 
     VendedoresModule,
+
+    ReportsModule,
+
+    PrinterModule,
   ],
 })
 export class AppModule {}
