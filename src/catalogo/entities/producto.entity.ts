@@ -7,10 +7,12 @@ import {
   ManyToOne,
   JoinColumn,
   OneToOne,
+  OneToMany,
 } from 'typeorm';
 import { Grupo } from './grupo.entity';
 import { Marca } from './marca.entity';
 import { Inventario } from 'src/inventario/entities/inventario.entity';
+import { MovimientoInventario } from 'src/inventario/entities/movimiento-inventario.entity';
 
 @Entity('productos')
 export class Producto {
@@ -71,4 +73,7 @@ export class Producto {
     cascade: true, // Permite crear/actualizar el inventario junto con el producto
   })
   inventario: Inventario;
+
+  @OneToMany(() => MovimientoInventario, (movimiento) => movimiento.producto)
+  movimientos: MovimientoInventario[];
 }

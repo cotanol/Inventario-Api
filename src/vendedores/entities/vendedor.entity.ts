@@ -7,6 +7,7 @@ import {
   OneToMany,
 } from 'typeorm';
 import { Cliente } from 'src/clientes/entities/cliente.entity';
+import { Pedido } from 'src/pedidos/entities/pedido.entity';
 
 @Entity('vendedores')
 export class Vendedor {
@@ -46,4 +47,7 @@ export class Vendedor {
   // --- Relaciones ---
   @OneToMany(() => Cliente, (cliente) => cliente.vendedor)
   clientes: Cliente[];
+
+  @OneToMany(() => Pedido, (pedido) => pedido.vendedor)
+  pedidos: Pedido[];
 }

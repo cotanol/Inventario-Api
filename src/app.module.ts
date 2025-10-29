@@ -11,6 +11,7 @@ import { ReportsModule } from './reports/reports.module';
 import { PrinterModule } from './printer/printer.module';
 import { ServeStaticModule } from '@nestjs/serve-static';
 import { join } from 'path';
+import { PedidosModule } from './pedidos/pedidos.module';
 
 @Module({
   imports: [
@@ -68,6 +69,8 @@ import { join } from 'path';
     ReportsModule,
 
     PrinterModule,
+
+    PedidosModule,
   ],
 })
 export class AppModule {}

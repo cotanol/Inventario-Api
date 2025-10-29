@@ -5,9 +5,11 @@ import {
   PrimaryGeneratedColumn,
   UpdateDateColumn,
   ManyToOne,
+  OneToMany,
   JoinColumn,
 } from 'typeorm';
 import { Vendedor } from 'src/vendedores/entities/vendedor.entity';
+import { Pedido } from 'src/pedidos/entities/pedido.entity';
 
 @Entity('clientes')
 export class Cliente {
@@ -52,6 +54,10 @@ export class Cliente {
   @ManyToOne(() => Vendedor, (vendedor) => vendedor.clientes)
   @JoinColumn({ name: 'vendedor_id' })
   vendedor: Vendedor;
+
+  // --- Relación con Pedidos ---
+  @OneToMany(() => Pedido, (pedido) => pedido.cliente)
+  pedidos: Pedido[];
 
   // --- Auditoría ---
   @CreateDateColumn({ name: 'fecha_creacion', type: 'timestamptz' })
