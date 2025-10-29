@@ -10,7 +10,7 @@ import {
 } from 'typeorm';
 import { PermisoPerfil } from './permiso-perfil.entity';
 
-enum TipoPermiso {
+export enum TipoPermiso {
   MENU = 'MENU',
   ACCION = 'ACCION',
 }
