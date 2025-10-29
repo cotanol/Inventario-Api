@@ -19,6 +19,8 @@ import {
   UpdateProductoDto,
   ChangeStatusDto,
 } from './dto';
+import { RequirePermissions } from 'src/auth/decorators/require-permissions.decorator';
+import { ValidPermissions } from 'src/auth/interfaces/valid-permissions.interface';
 
 @Controller('catalogo')
 export class CatalogoController {
@@ -26,21 +28,25 @@ export class CatalogoController {
 
   // === ENDPOINTS LÍNEAS ===
   @Post('lineas')
+  @RequirePermissions(ValidPermissions.CREAR_LINEA)
   createLinea(@Body() createLineaDto: CreateLineaDto) {
     return this.catalogoService.createLinea(createLineaDto);
   }
 
   @Get('lineas')
+  @RequirePermissions(ValidPermissions.VER_LINEAS)
   findAllLineas() {
     return this.catalogoService.findAllLineas();
   }
 
   @Get('lineas/:id')
+  @RequirePermissions(ValidPermissions.VER_LINEAS)
   findOneLinea(@Param('id', ParseIntPipe) id: number) {
     return this.catalogoService.findOneLinea(id);
   }
 
   @Patch('lineas/:id')
+  @RequirePermissions(ValidPermissions.EDITAR_LINEA)
   updateLinea(
     @Param('id', ParseIntPipe) id: number,
     @Body() updateLineaDto: UpdateLineaDto,
@@ -49,6 +55,7 @@ export class CatalogoController {
   }
 
   @Patch('lineas/:id/change-status')
+  @RequirePermissions(ValidPermissions.EDITAR_LINEA)
   changeLineaStatus(
     @Param('id', ParseIntPipe) id: number,
     @Body() changeStatusDto: ChangeStatusDto,
@@ -58,26 +65,31 @@ export class CatalogoController {
 
   // === ENDPOINTS GRUPOS ===
   @Post('grupos')
+  @RequirePermissions(ValidPermissions.CREAR_GRUPO)
   createGrupo(@Body() createGrupoDto: CreateGrupoDto) {
     return this.catalogoService.createGrupo(createGrupoDto);
   }
 
   @Get('grupos')
+  @RequirePermissions(ValidPermissions.VER_GRUPOS)
   findAllGrupos() {
     return this.catalogoService.findAllGrupos();
   }
 
   @Get('grupos/linea/:lineaId')
+  @RequirePermissions(ValidPermissions.VER_GRUPOS)
   findGruposByLinea(@Param('lineaId', ParseIntPipe) lineaId: number) {
     return this.catalogoService.findGruposByLinea(lineaId);
   }
 
   @Get('grupos/:id')
+  @RequirePermissions(ValidPermissions.VER_GRUPOS)
   findOneGrupo(@Param('id', ParseIntPipe) id: number) {
     return this.catalogoService.findOneGrupo(id);
   }
 
   @Patch('grupos/:id')
+  @RequirePermissions(ValidPermissions.EDITAR_GRUPO)
   updateGrupo(
     @Param('id', ParseIntPipe) id: number,
     @Body() updateGrupoDto: UpdateGrupoDto,
@@ -86,6 +98,7 @@ export class CatalogoController {
   }
 
   @Patch('grupos/:id/change-status')
+  @RequirePermissions(ValidPermissions.EDITAR_GRUPO)
   changeGrupoStatus(
     @Param('id', ParseIntPipe) id: number,
     @Body() changeStatusDto: ChangeStatusDto,
@@ -95,21 +108,25 @@ export class CatalogoController {
 
   // === ENDPOINTS MARCAS ===
   @Post('marcas')
+  @RequirePermissions(ValidPermissions.CREAR_MARCA)
   createMarca(@Body() createMarcaDto: CreateMarcaDto) {
     return this.catalogoService.createMarca(createMarcaDto);
   }
 
   @Get('marcas')
+  @RequirePermissions(ValidPermissions.VER_MARCAS)
   findAllMarcas() {
     return this.catalogoService.findAllMarcas();
   }
 
   @Get('marcas/:id')
+  @RequirePermissions(ValidPermissions.VER_MARCAS)
   findOneMarca(@Param('id', ParseIntPipe) id: number) {
     return this.catalogoService.findOneMarca(id);
   }
 
   @Patch('marcas/:id')
+  @RequirePermissions(ValidPermissions.EDITAR_MARCA)
   updateMarca(
     @Param('id', ParseIntPipe) id: number,
     @Body() updateMarcaDto: UpdateMarcaDto,
@@ -118,6 +135,7 @@ export class CatalogoController {
   }
 
   @Patch('marcas/:id/change-status')
+  @RequirePermissions(ValidPermissions.EDITAR_MARCA)
   changeMarcaStatus(
     @Param('id', ParseIntPipe) id: number,
     @Body() changeStatusDto: ChangeStatusDto,
@@ -127,21 +145,25 @@ export class CatalogoController {
 
   // === ENDPOINTS PRODUCTOS ===
   @Post('productos')
+  @RequirePermissions(ValidPermissions.CREAR_PRODUCTO)
   createProducto(@Body() createProductoDto: CreateProductoDto) {
     return this.catalogoService.createProducto(createProductoDto);
   }
 
   @Get('productos')
+  @RequirePermissions(ValidPermissions.VER_PRODUCTOS)
   findAllProductos() {
     return this.catalogoService.findAllProductos();
   }
 
   @Get('productos/:id')
+  @RequirePermissions(ValidPermissions.VER_PRODUCTOS)
   findOneProducto(@Param('id', ParseIntPipe) id: number) {
     return this.catalogoService.findOneProducto(id);
   }
 
   @Patch('productos/:id')
+  @RequirePermissions(ValidPermissions.EDITAR_PRODUCTO)
   updateProducto(
     @Param('id', ParseIntPipe) id: number,
     @Body() updateProductoDto: UpdateProductoDto,
@@ -150,6 +172,7 @@ export class CatalogoController {
   }
 
   @Patch('productos/:id/change-status')
+  @RequirePermissions(ValidPermissions.EDITAR_PRODUCTO)
   changeProductoStatus(
     @Param('id', ParseIntPipe) id: number,
     @Body() changeStatusDto: ChangeStatusDto,

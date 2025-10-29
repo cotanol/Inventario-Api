@@ -13,8 +13,8 @@ import { CreateUserDto, LoginUserDto } from './dto';
 import { GetUser } from './decorators/get-user.decorator';
 import { Usuario } from './entities/usuario.entity';
 
-import { ValidRoles } from './interfaces/valid-roles.interface';
-import { Auth } from './decorators/auth.decorator';
+import { ValidPermissions } from './interfaces/valid-permissions.interface';
+import { RequirePermissions } from './decorators/require-permissions.decorator';
 import {
   ApiBearerAuth,
   ApiOperation,
@@ -48,9 +48,9 @@ export class AuthController {
   })
   @ApiResponse({
     status: 403,
-    description: 'Forbidden: No tienes permisos de administrador.',
+    description: 'Forbidden: No tienes el permiso CREAR_USUARIO.',
   })
-  @Auth(ValidRoles.admin)
+  @RequirePermissions(ValidPermissions.CREAR_USUARIO)
   async register(@Body() createUserDto: CreateUserDto) {
     return this.authService.create(createUserDto);
   }
@@ -88,7 +88,7 @@ export class AuthController {
     status: 403,
     description: 'Forbidden: El token no es válido o ha expirado.',
   })
-  @Auth()
+  @RequirePermissions()
   checkAuthStatus(@GetUser() user: Usuario) {
     return this.authService.checkAuthStatus(user);
   }
@@ -106,7 +106,7 @@ export class AuthController {
     status: 403,
     description: 'Forbidden: El token no es válido o ha expirado.',
   })
-  @Auth() // Requiere que el usuario esté autenticado, pero no un rol específico.
+  @RequirePermissions() // Solo requiere autenticación
   getMenu(@GetUser() user: Usuario) {
     return this.authService.getMenuForUser(user);
   }
@@ -122,9 +122,9 @@ export class AuthController {
   @ApiResponse({ status: 200, description: 'Lista de perfiles obtenida.' })
   @ApiResponse({
     status: 403,
-    description: 'Forbidden: No tienes permisos de administrador.',
+    description: 'Forbidden: No tienes el permiso VER_PERFILES.',
   })
-  @Auth(ValidRoles.admin)
+  @RequirePermissions(ValidPermissions.VER_PERFILES)
   findAllPerfiles() {
     return this.authService.findAllPerfiles();
   }
@@ -140,9 +140,9 @@ export class AuthController {
   @ApiResponse({ status: 200, description: 'Lista de usuarios obtenida.' })
   @ApiResponse({
     status: 403,
-    description: 'Forbidden: No tienes permisos de administrador.',
+    description: 'Forbidden: No tienes el permiso VER_USUARIOS.',
   })
-  @Auth(ValidRoles.admin)
+  @RequirePermissions(ValidPermissions.VER_USUARIOS)
   findAllUsers() {
     return this.authService.findAllUsers();
   }
@@ -167,7 +167,7 @@ export class AuthController {
     status: 404,
     description: 'Not Found: Usuario no encontrado.',
   })
-  @Auth(ValidRoles.admin)
+  @RequirePermissions(ValidPermissions.EDITAR_USUARIO)
   changeStatus(
     @Param('id', ParseIntPipe) id: number,
     @Body() changeStatusDto: ChangeStatusDto,
@@ -194,7 +194,7 @@ export class AuthController {
     status: 404,
     description: 'Not Found: Usuario no encontrado.',
   })
-  @Auth(ValidRoles.admin)
+  @RequirePermissions(ValidPermissions.VER_USUARIOS)
   getUserById(@Param('id', ParseIntPipe) id: number) {
     return this.authService.findUserById(id);
   }
@@ -222,7 +222,7 @@ export class AuthController {
     status: 404,
     description: 'Not Found: Usuario no encontrado.',
   })
-  @Auth(ValidRoles.admin)
+  @RequirePermissions(ValidPermissions.EDITAR_USUARIO)
   update(
     @Param('id', ParseIntPipe) id: number,
     @Body() updateUserDto: UpdateUserDto,
@@ -231,21 +231,25 @@ export class AuthController {
   }
 
   @Get('permisos')
+  @RequirePermissions(ValidPermissions.VER_PERFILES)
   findAllPermisos() {
     return this.authService.findAllPermisos();
   }
 
   @Post('perfiles')
+  @RequirePermissions(ValidPermissions.CREAR_PERFIL)
   createPerfil(@Body() createPerfilDto: CreatePerfilDto) {
     return this.authService.createPerfil(createPerfilDto);
   }
 
   @Get('perfiles/:id')
+  @RequirePermissions(ValidPermissions.VER_PERFILES)
   findOnePerfil(@Param('id', ParseIntPipe) id: number) {
     return this.authService.findOnePerfil(id);
   }
 
   @Patch('perfiles/:id')
+  @RequirePermissions(ValidPermissions.EDITAR_PERFIL)
   updatePerfil(
     @Param('id', ParseIntPipe) id: number,
     @Body() updatePerfilDto: UpdatePerfilDto,
@@ -254,6 +258,7 @@ export class AuthController {
   }
 
   @Patch('perfiles/:id/change-status')
+  @RequirePermissions(ValidPermissions.EDITAR_PERFIL)
   changeStatusPerfil(
     @Param('id', ParseIntPipe) id: number,
     @Body() changeStatusDto: ChangeStatusDto,
