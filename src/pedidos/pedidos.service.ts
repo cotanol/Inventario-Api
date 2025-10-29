@@ -17,6 +17,7 @@ import {
   MovimientoInventario,
   TipoMovimientoInventario,
 } from 'src/inventario/entities/movimiento-inventario.entity';
+import { ReportsService } from 'src/reports/reports.service';
 
 @Injectable()
 export class PedidosService {
@@ -36,6 +37,7 @@ export class PedidosService {
     @InjectRepository(MovimientoInventario)
     private readonly movimientoInventarioRepository: Repository<MovimientoInventario>,
     private readonly dataSource: DataSource,
+    private readonly reportsService: ReportsService,
   ) {}
 
   /**
@@ -316,6 +318,15 @@ export class PedidosService {
     // Si se está completando el pedido, validar stock y afectar inventario
     if (nuevoEstado === estadoPedido.COMPLETADO) {
       await this.completarPedido(pedido);
+
+      // Generar el PDF de nota de pedido
+      try {
+        const pdfUrl = await this.reportsService.saveNotaPedidoReport(pedido);
+        pedido.urlPdf = pdfUrl;
+      } catch (error) {
+        console.error('Error al generar PDF:', error);
+        // No lanzamos error, solo log. El pedido se completa de todas formas
+      }
     }
 
     // Actualizar estado

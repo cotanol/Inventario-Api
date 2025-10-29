@@ -7,5 +7,6 @@ import { PrinterModule } from 'src/printer/printer.module';
   controllers: [ReportsController],
   providers: [ReportsService],
   imports: [PrinterModule],
+  exports: [ReportsService],
 })
 export class ReportsModule {}
