@@ -251,15 +251,14 @@ export class PedidosService {
           const subtotal = producto.precio * detalle.cantidad;
           totalNeto += subtotal;
 
-          const nuevoDetalle = this.detallePedidoRepository.create({
+          // Insertar directamente con queryRunner
+          await queryRunner.manager.insert(DetallePedido, {
             pedidoId: pedido.pedidoId,
             productoId: producto.productoId,
             cantidad: detalle.cantidad,
             precioUnitario: producto.precio,
             subtotalLinea: subtotal,
           });
-
-          await queryRunner.manager.save(nuevoDetalle);
         }
 
         // Actualizar totales
@@ -267,8 +266,14 @@ export class PedidosService {
         pedido.totalFinal = totalNeto; // Por ahora sin impuestos
       }
 
-      // Guardar el pedido actualizado
-      await queryRunner.manager.save(pedido);
+      // Actualizar el pedido usando update() para evitar problemas con las relaciones
+      await queryRunner.manager.update(Pedido, pedido.pedidoId, {
+        clienteId: pedido.clienteId,
+        vendedorId: pedido.vendedorId,
+        tipoPago: pedido.tipoPago,
+        totalNeto: pedido.totalNeto,
+        totalFinal: pedido.totalFinal,
+      });
 
       await queryRunner.commitTransaction();
 
