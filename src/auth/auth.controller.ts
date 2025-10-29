@@ -230,9 +230,9 @@ export class AuthController {
     return this.authService.updateUser(id, updateUserDto);
   }
 
-  @Get('opciones-menu')
-  findAllOpcionesMenu() {
-    return this.authService.findAllOpcionesMenu();
+  @Get('permisos')
+  findAllPermisos() {
+    return this.authService.findAllPermisos();
   }
 
   @Post('perfiles')

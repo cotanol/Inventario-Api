@@ -1,11 +1,11 @@
 import { Entity, Column, ManyToOne, JoinColumn, PrimaryColumn } from 'typeorm';
-import { OpcionMenu } from './opcion-menu.entity';
+import { Permiso } from './permiso.entity';
 import { Perfil } from './perfil.entity';
 
-@Entity('opciones_menu_perfiles')
-export class OpcionMenuPerfil {
-  @PrimaryColumn('int', { name: 'opcion_menu_id' })
-  opcionMenuId: number;
+@Entity('permisos_perfiles')
+export class PermisoPerfil {
+  @PrimaryColumn('int', { name: 'permiso_id' })
+  permisoId: number;
 
   @PrimaryColumn('int', { name: 'perfil_id' })
   perfilId: number;
@@ -17,11 +17,11 @@ export class OpcionMenuPerfil {
   estadoRegistro: boolean;
 
   // --- Relaciones ---
-  @ManyToOne(() => OpcionMenu, (opcionMenu) => opcionMenu.perfilesLink)
-  @JoinColumn({ name: 'opcion_menu_id' })
-  opcionMenu: OpcionMenu;
+  @ManyToOne(() => Permiso, (permiso) => permiso.perfilesLink)
+  @JoinColumn({ name: 'permiso_id' })
+  permiso: Permiso;
 
-  @ManyToOne(() => Perfil, (perfil) => perfil.opcionesMenuLink)
+  @ManyToOne(() => Perfil, (perfil) => perfil.permisosLink)
   @JoinColumn({ name: 'perfil_id' })
   perfil: Perfil;
 }

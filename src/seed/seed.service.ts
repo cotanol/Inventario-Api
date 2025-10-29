@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { InjectDataSource, InjectRepository } from '@nestjs/typeorm';
-import { OpcionMenuPerfil } from 'src/auth/entities/opcion-menu-perfil.entity';
-import { OpcionMenu } from 'src/auth/entities/opcion-menu.entity';
+import { PermisoPerfil } from 'src/auth/entities/permiso-perfil.entity';
+import { Permiso } from 'src/auth/entities/permiso.entity';
 import { Perfil } from 'src/auth/entities/perfil.entity';
 import { UsuarioPerfil } from 'src/auth/entities/usuario-perfil.entity';
 import { Usuario } from 'src/auth/entities/usuario.entity';
@@ -18,10 +18,10 @@ export class SeedService {
     private readonly userRepository: Repository<Usuario>,
     @InjectRepository(Perfil)
     private readonly perfilRepository: Repository<Perfil>,
-    @InjectRepository(OpcionMenu)
-    private readonly opcionMenuRepository: Repository<OpcionMenu>,
-    @InjectRepository(OpcionMenuPerfil)
-    private readonly opcionMenuPerfilRepository: Repository<OpcionMenuPerfil>,
+    @InjectRepository(Permiso)
+    private readonly permisoRepository: Repository<Permiso>,
+    @InjectRepository(PermisoPerfil)
+    private readonly permisoPerfilRepository: Repository<PermisoPerfil>,
     @InjectRepository(UsuarioPerfil)
     private readonly usuarioPerfilRepository: Repository<UsuarioPerfil>,
   ) {}
@@ -30,15 +30,15 @@ export class SeedService {
     await this.deleteTables();
     await this.insertUsers();
     await this.insertProfiles();
-    await this.insertMenuOptions();
-    await this.assignMenuOptionsToProfiles();
+    await this.insertPermisos();
+    await this.assignPermisosToProfiles();
     await this.assignProfilesToUsers();
     return 'SEED EXECUTED';
   }
 
   private async deleteTables() {
     await this.dataSource.query(
-      'TRUNCATE TABLE "usuarios", "perfiles", "opciones_menu", "usuarios_perfiles", "opciones_menu_perfiles", "inventarios", "productos", "marcas", "grupos", "lineas", "clientes" RESTART IDENTITY CASCADE',
+      'TRUNCATE TABLE "usuarios", "perfiles", "permisos", "usuarios_perfiles", "permisos_perfiles", "inventarios", "productos", "marcas", "grupos", "lineas", "clientes" RESTART IDENTITY CASCADE',
     );
   }
 
@@ -64,22 +64,22 @@ export class SeedService {
     await this.perfilRepository.save(profiles);
   }
 
-  private async insertMenuOptions() {
-    const seedMenuOptions = initialData.opcionesMenu;
-    const menuOptions: OpcionMenu[] = [];
-    for (const option of seedMenuOptions) {
-      menuOptions.push(this.opcionMenuRepository.create(option));
+  private async insertPermisos() {
+    const seedPermisos = initialData.permisos;
+    const permisos: Permiso[] = [];
+    for (const permiso of seedPermisos) {
+      permisos.push(this.permisoRepository.create(permiso));
     }
-    await this.opcionMenuRepository.save(menuOptions);
+    await this.permisoRepository.save(permisos);
   }
 
-  private async assignMenuOptionsToProfiles() {
-    const seedMenuOptionsProfiles = initialData.opcionesMenuPerfiles;
-    const menuOptionsProfiles: OpcionMenuPerfil[] = [];
-    for (const omp of seedMenuOptionsProfiles) {
-      menuOptionsProfiles.push(this.opcionMenuPerfilRepository.create(omp));
+  private async assignPermisosToProfiles() {
+    const seedPermisosPerfiles = initialData.permisosPerfiles;
+    const permisosPerfiles: PermisoPerfil[] = [];
+    for (const pp of seedPermisosPerfiles) {
+      permisosPerfiles.push(this.permisoPerfilRepository.create(pp));
     }
-    await this.opcionMenuPerfilRepository.save(menuOptionsProfiles);
+    await this.permisoPerfilRepository.save(permisosPerfiles);
   }
 
   private async assignProfilesToUsers() {

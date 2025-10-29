@@ -16,10 +16,10 @@ import { JwtPayLoad } from './interfaces/jwt-payload.interface';
 import { JwtService } from '@nestjs/jwt';
 import { UsuarioPerfil } from './entities/usuario-perfil.entity';
 import { Perfil } from './entities/perfil.entity';
-import { OpcionMenu } from './entities/opcion-menu.entity';
+import { Permiso } from './entities/permiso.entity';
 import { ChangeStatusDto } from './dto/change-status.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
-import { OpcionMenuPerfil } from './entities/opcion-menu-perfil.entity';
+import { PermisoPerfil } from './entities/permiso-perfil.entity';
 import { UpdatePerfilDto } from './dto/update-perfil.dto';
 import { CreatePerfilDto } from './dto/create-perfil.dto';
 
@@ -31,10 +31,10 @@ export class AuthService {
     private usuarioPerfilRepository: Repository<UsuarioPerfil>,
     @InjectRepository(Perfil)
     private perfilRepository: Repository<Perfil>,
-    @InjectRepository(OpcionMenu)
-    private opcionMenuRepository: Repository<OpcionMenu>,
-    @InjectRepository(OpcionMenuPerfil)
-    private opcionMenuPerfilRepository: Repository<OpcionMenuPerfil>,
+    @InjectRepository(Permiso)
+    private permisoRepository: Repository<Permiso>,
+    @InjectRepository(PermisoPerfil)
+    private permisoPerfilRepository: Repository<PermisoPerfil>,
     private dataSource: DataSource,
     private readonly jwtService: JwtService,
   ) {}
@@ -157,9 +157,9 @@ export class AuthService {
   async findAllPerfiles(): Promise<Perfil[]> {
     return this.perfilRepository.find({
       relations: {
-        // Le decimos que dentro de 'opcionesMenuLink', también cargue 'opcionMenu'
-        opcionesMenuLink: {
-          opcionMenu: true,
+        // Le decimos que dentro de 'permisosLink', también cargue 'permiso'
+        permisosLink: {
+          permiso: true,
         },
       },
       order: { nombre: 'ASC' },
@@ -269,8 +269,8 @@ export class AuthService {
       relations: [
         'perfilesLink',
         'perfilesLink.perfil',
-        'perfilesLink.perfil.opcionesMenuLink',
-        'perfilesLink.perfil.opcionesMenuLink.opcionMenu',
+        'perfilesLink.perfil.permisosLink',
+        'perfilesLink.perfil.permisosLink.permiso',
       ],
     });
 
@@ -278,19 +278,19 @@ export class AuthService {
       return [];
     }
 
-    // Extraer opciones de menú de todos los perfiles del usuario
+    // Extraer permisos de todos los perfiles del usuario
     const menuOptions: any[] = [];
     userWithMenus.perfilesLink.forEach((userProfile) => {
-      if (userProfile.perfil && userProfile.perfil.opcionesMenuLink) {
-        userProfile.perfil.opcionesMenuLink.forEach((menuProfile) => {
-          if (menuProfile.opcionMenu && menuProfile.opcionMenu.estadoRegistro) {
+      if (userProfile.perfil && userProfile.perfil.permisosLink) {
+        userProfile.perfil.permisosLink.forEach((menuProfile) => {
+          if (menuProfile.permiso && menuProfile.permiso.estadoRegistro) {
             menuOptions.push({
-              id: menuProfile.opcionMenu.opcionMenuId,
-              nombre: menuProfile.opcionMenu.nombre,
-              urlMenu: menuProfile.opcionMenu.urlMenu,
-              descripcion: menuProfile.opcionMenu.descripcion,
-              estadoRegistro: menuProfile.opcionMenu.estadoRegistro,
-              idPadre: menuProfile.opcionMenu.opcionMenuPadreId,
+              id: menuProfile.permiso.permisoId,
+              nombre: menuProfile.permiso.nombre,
+              urlMenu: menuProfile.permiso.urlMenu,
+              descripcion: menuProfile.permiso.descripcion,
+              estadoRegistro: menuProfile.permiso.estadoRegistro,
+              idPadre: menuProfile.permiso.permisoPadreId,
               orden: menuProfile.orden,
             });
           }
@@ -317,7 +317,7 @@ export class AuthService {
   }
 
   private buildMenuHierarchy(
-    options: any[], // Cambiado de OpcionMenu[] a any[]
+    options: any[], // Cambiado de Permiso[] a any[]
     parentId: number | null = null,
     visited = new Set<number>(),
   ): any[] {
@@ -369,8 +369,8 @@ export class AuthService {
     return token;
   }
 
-  async findAllOpcionesMenu(): Promise<OpcionMenu[]> {
-    return this.opcionMenuRepository.find({
+  async findAllPermisos(): Promise<Permiso[]> {
+    return this.permisoRepository.find({
       where: { estadoRegistro: true }, // Opcional: solo traer los permisos activos
       order: { nombre: 'ASC' },
     });
@@ -378,7 +378,7 @@ export class AuthService {
 
   /* Perfiles */
   async createPerfil(createPerfilDto: CreatePerfilDto): Promise<Perfil> {
-    const { nombre, descripcion, opcionesMenu } = createPerfilDto;
+    const { nombre, descripcion, permisos } = createPerfilDto;
     const queryRunner = this.dataSource.createQueryRunner();
     await queryRunner.connect();
     await queryRunner.startTransaction();
@@ -387,22 +387,22 @@ export class AuthService {
       const perfil = this.perfilRepository.create({ nombre, descripcion });
       await queryRunner.manager.save(perfil);
 
-      if (opcionesMenu && opcionesMenu.length > 0) {
-        const opcionesIds = opcionesMenu.map((opt) => opt.opcionMenuId);
-        const opcionesExistentes = await this.opcionMenuRepository.findBy({
-          opcionMenuId: In(opcionesIds),
+      if (permisos && permisos.length > 0) {
+        const permisosIds = permisos.map((opt) => opt.permisoId);
+        const permisosExistentes = await this.permisoRepository.findBy({
+          permisoId: In(permisosIds),
         });
 
-        if (opcionesExistentes.length !== opcionesIds.length) {
+        if (permisosExistentes.length !== permisosIds.length) {
           throw new BadRequestException(
-            'Uno o más IDs de opciones de menú no son válidos.',
+            'Uno o más IDs de permisos no son válidos.',
           );
         }
 
-        const enlaces = opcionesMenu.map((opt) =>
-          this.opcionMenuPerfilRepository.create({
+        const enlaces = permisos.map((opt) =>
+          this.permisoPerfilRepository.create({
             perfilId: perfil.perfilId,
-            opcionMenuId: opt.opcionMenuId,
+            permisoId: opt.permisoId,
             orden: opt.orden,
           }),
         );
@@ -422,7 +422,7 @@ export class AuthService {
   async findOnePerfil(id: number): Promise<Perfil> {
     const perfil = await this.perfilRepository.findOne({
       where: { perfilId: id },
-      relations: ['opcionesMenuLink', 'opcionesMenuLink.opcionMenu'],
+      relations: ['permisosLink', 'permisosLink.permiso'],
     });
     if (!perfil) {
       throw new NotFoundException(`Perfil con ID "${id}" no encontrado.`);
@@ -436,7 +436,7 @@ export class AuthService {
     id: number,
     updatePerfilDto: UpdatePerfilDto,
   ): Promise<Perfil> {
-    const { nombre, descripcion, opcionesMenu } = updatePerfilDto;
+    const { nombre, descripcion, permisos } = updatePerfilDto;
     const queryRunner = this.dataSource.createQueryRunner();
     await queryRunner.connect();
     await queryRunner.startTransaction();
@@ -452,24 +452,24 @@ export class AuthService {
       queryRunner.manager.merge(Perfil, perfil, { nombre, descripcion });
       await queryRunner.manager.save(perfil);
 
-      if (opcionesMenu) {
-        await queryRunner.manager.delete(OpcionMenuPerfil, { perfilId: id });
+      if (permisos) {
+        await queryRunner.manager.delete(PermisoPerfil, { perfilId: id });
 
-        if (opcionesMenu.length > 0) {
-          const opcionesIds = opcionesMenu.map((opt) => opt.opcionMenuId);
-          const opcionesExistentes = await this.opcionMenuRepository.findBy({
-            opcionMenuId: In(opcionesIds),
+        if (permisos.length > 0) {
+          const permisosIds = permisos.map((opt) => opt.permisoId);
+          const permisosExistentes = await this.permisoRepository.findBy({
+            permisoId: In(permisosIds),
           });
-          if (opcionesExistentes.length !== opcionesIds.length) {
+          if (permisosExistentes.length !== permisosIds.length) {
             throw new BadRequestException(
-              'Uno o más IDs de opciones de menú no son válidos.',
+              'Uno o más IDs de permisos no son válidos.',
             );
           }
 
-          const nuevosEnlaces = opcionesMenu.map((opt) =>
-            this.opcionMenuPerfilRepository.create({
+          const nuevosEnlaces = permisos.map((opt) =>
+            this.permisoPerfilRepository.create({
               perfilId: id,
-              opcionMenuId: opt.opcionMenuId,
+              permisoId: opt.permisoId,
               orden: opt.orden,
             }),
           );

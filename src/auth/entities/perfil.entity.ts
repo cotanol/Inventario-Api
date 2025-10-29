@@ -7,7 +7,7 @@ import {
   UpdateDateColumn,
 } from 'typeorm';
 import { UsuarioPerfil } from './usuario-perfil.entity';
-import { OpcionMenuPerfil } from './opcion-menu-perfil.entity';
+import { PermisoPerfil } from './permiso-perfil.entity';
 
 @Entity('perfiles')
 export class Perfil {
@@ -39,9 +39,6 @@ export class Perfil {
   @OneToMany(() => UsuarioPerfil, (usuarioPerfil) => usuarioPerfil.perfil)
   usuariosLink: UsuarioPerfil[];
 
-  @OneToMany(
-    () => OpcionMenuPerfil,
-    (opcionMenuPerfil) => opcionMenuPerfil.perfil,
-  )
-  opcionesMenuLink: OpcionMenuPerfil[];
+  @OneToMany(() => PermisoPerfil, (permisoPerfil) => permisoPerfil.perfil)
+  permisosLink: PermisoPerfil[];
 }

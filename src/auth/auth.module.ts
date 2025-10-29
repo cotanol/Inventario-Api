@@ -7,8 +7,8 @@ import { PassportModule } from '@nestjs/passport';
 import { JwtModule } from '@nestjs/jwt';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { JwtStrategy } from './strategies/jwt.strategy';
-import { OpcionMenu } from './entities/opcion-menu.entity';
-import { OpcionMenuPerfil } from './entities/opcion-menu-perfil.entity';
+import { Permiso } from './entities/permiso.entity';
+import { PermisoPerfil } from './entities/permiso-perfil.entity';
 import { UsuarioPerfil } from './entities/usuario-perfil.entity';
 import { Perfil } from './entities/perfil.entity';
 
@@ -18,8 +18,8 @@ import { Perfil } from './entities/perfil.entity';
       Usuario,
       Perfil,
       UsuarioPerfil,
-      OpcionMenuPerfil,
-      OpcionMenu,
+      PermisoPerfil,
+      Permiso,
     ]),
     PassportModule.register({ defaultStrategy: 'jwt' }),
     JwtModule.registerAsync({

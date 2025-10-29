@@ -8,18 +8,33 @@ import {
   UpdateDateColumn,
   CreateDateColumn,
 } from 'typeorm';
-import { OpcionMenuPerfil } from './opcion-menu-perfil.entity';
+import { PermisoPerfil } from './permiso-perfil.entity';
 
-@Entity('opciones_menu')
-export class OpcionMenu {
-  @PrimaryGeneratedColumn({ name: 'opcion_menu_id' })
-  opcionMenuId: number;
+enum TipoPermiso {
+  MENU = 'MENU',
+  ACCION = 'ACCION',
+}
+
+@Entity('permisos')
+export class Permiso {
+  @PrimaryGeneratedColumn({ name: 'permiso_id' })
+  permisoId: number;
 
   @Column('varchar', { name: 'nombre', length: 50 })
   nombre: string;
 
   @Column('varchar', { name: 'url_menu', length: 50, nullable: true })
   urlMenu: string;
+
+  @Column('enum', {
+    name: 'tipo_permiso',
+    enum: TipoPermiso,
+    default: TipoPermiso.MENU,
+  })
+  tipoPermiso: TipoPermiso;
+
+  @Column('varchar', { name: 'key_permiso', length: 50 })
+  keyPermiso: string;
 
   @Column('varchar', { name: 'descripcion', length: 100, nullable: true })
   descripcion: string;
@@ -40,20 +55,17 @@ export class OpcionMenu {
   fechaModificacion: Date;
 
   // --- Relación Padre-Hijo (jerarquía) ---
-  @Column('int', { name: 'opcion_menu_padre_id', nullable: true })
-  opcionMenuPadreId: number;
+  @Column('int', { name: 'permiso_padre_id', nullable: true })
+  permisoPadreId: number;
 
-  @ManyToOne(() => OpcionMenu, (opcion) => opcion.opcionesMenuHijos)
-  @JoinColumn({ name: 'opcion_menu_padre_id' })
-  opcionMenuPadre: OpcionMenu;
+  @ManyToOne(() => Permiso, (permiso) => permiso.permisosHijos)
+  @JoinColumn({ name: 'permiso_padre_id' })
+  permisoPadre: Permiso;
 
-  @OneToMany(() => OpcionMenu, (opcion) => opcion.opcionMenuPadre)
-  opcionesMenuHijos: OpcionMenu[];
+  @OneToMany(() => Permiso, (permiso) => permiso.permisoPadre)
+  permisosHijos: Permiso[];
 
   // --- Relación con Perfiles ---
-  @OneToMany(
-    () => OpcionMenuPerfil,
-    (opcionMenuPerfil) => opcionMenuPerfil.opcionMenu,
-  )
-  perfilesLink: OpcionMenuPerfil[];
+  @OneToMany(() => PermisoPerfil, (permisoPerfil) => permisoPerfil.permiso)
+  perfilesLink: PermisoPerfil[];
 }

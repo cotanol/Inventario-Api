@@ -15,16 +15,17 @@ interface SeedPerfil {
   descripcion?: string;
 }
 
-interface SeedOpcionMenu {
-  opcionMenuId: number;
+interface SeedPermiso {
+  permisoId: number;
   nombre: string;
+  keyPermiso: string;
   urlMenu: string;
   descripcion?: string;
-  opcionMenuPadreId?: number;
+  permisoPadreId?: number;
 }
 
-interface SeedOpcionMenuPerfil {
-  opcionMenuId: number;
+interface SeedPermisoPerfil {
+  permisoId: number;
   perfilId: number;
   orden: number;
 }
@@ -37,8 +38,8 @@ interface SeedUsuarioPerfil {
 interface SeedData {
   usuarios: SeedUsuario[];
   perfiles: SeedPerfil[];
-  opcionesMenu: SeedOpcionMenu[];
-  opcionesMenuPerfiles: SeedOpcionMenuPerfil[];
+  permisos: SeedPermiso[];
+  permisosPerfiles: SeedPermisoPerfil[];
   usuariosPerfiles: SeedUsuarioPerfil[];
 }
 
@@ -50,16 +51,16 @@ const user3Id = 3; // Roberto Diaz
 const perfilAdminId = 1; // Administrador
 export const perfilTecnicoId = 2; // Tecnico
 
-const menuMantenimientoId = 1;
-const menuTipoServicioId = 2;
-const menuFallasId = 3;
-const menuTipoAsistenciaId = 4;
-const menuDetalleTrabajoId = 5;
-const menuTrabajosId = 6;
-const menuOrdenesTrabajoId = 7;
-const menuRegistrarTrabajoId = 8;
-const menuUsuariosId = 9;
-const menuLugaresAtencionId = 10;
+const permisoMantenimientoId = 1;
+const permisoTipoServicioId = 2;
+const permisoFallasId = 3;
+const permisoTipoAsistenciaId = 4;
+const permisoDetalleTrabajoId = 5;
+const permisoTrabajosId = 6;
+const permisoOrdenesTrabajoId = 7;
+const permisoRegistrarTrabajoId = 8;
+const permisoUsuariosId = 9;
+const permisoLugaresAtencionId = 10;
 
 export const initialData: SeedData = {
   usuarios: [
@@ -102,63 +103,73 @@ export const initialData: SeedData = {
       nombre: 'tecnico',
     },
   ],
-  opcionesMenu: [
+  permisos: [
     {
-      opcionMenuId: menuMantenimientoId,
+      permisoId: permisoMantenimientoId,
+      keyPermiso: 'CREAR_USUARIO',
       nombre: 'Crear Usuario',
       urlMenu: '/',
     },
     {
-      opcionMenuId: menuTipoServicioId,
+      permisoId: permisoTipoServicioId,
+      keyPermiso: 'EDITAR_USUARIO',
       nombre: 'Editar Usuario',
       urlMenu: 'home/TipoServicio',
-      opcionMenuPadreId: menuMantenimientoId,
+      permisoPadreId: permisoMantenimientoId,
     },
     {
-      opcionMenuId: menuFallasId,
+      permisoId: permisoFallasId,
+      keyPermiso: 'ELIMINAR_USUARIO',
       nombre: 'Eliminar Usuario',
       urlMenu: 'home/Fallas',
-      opcionMenuPadreId: menuMantenimientoId,
+      permisoPadreId: permisoMantenimientoId,
     },
     {
-      opcionMenuId: menuTipoAsistenciaId,
+      permisoId: permisoTipoAsistenciaId,
+      keyPermiso: 'CREAR_PRODUCTO',
       nombre: 'Crear Producto',
       urlMenu: 'home/TipoAsistencia',
-      opcionMenuPadreId: menuMantenimientoId,
+      permisoPadreId: permisoMantenimientoId,
     },
     {
-      opcionMenuId: menuDetalleTrabajoId,
+      permisoId: permisoDetalleTrabajoId,
+      keyPermiso: 'EDITAR_PRODUCTO',
       nombre: 'Editar Producto',
       urlMenu: 'home/DetalleTrabajo',
-      opcionMenuPadreId: menuMantenimientoId,
+      permisoPadreId: permisoMantenimientoId,
     },
     {
-      opcionMenuId: menuTrabajosId,
+      permisoId: permisoTrabajosId,
+      keyPermiso: 'ELIMINAR_PRODUCTO',
       nombre: 'Eliminar Producto',
       urlMenu: '/',
     },
     {
-      opcionMenuId: menuOrdenesTrabajoId,
+      permisoId: permisoOrdenesTrabajoId,
+      keyPermiso: 'CREAR_CLIENTE',
       nombre: 'Crear Cliente',
       urlMenu: 'home/OrdenesTrabajo',
-      opcionMenuPadreId: menuTrabajosId,
+      permisoPadreId: permisoTrabajosId,
     },
     {
-      opcionMenuId: menuRegistrarTrabajoId,
+      permisoId: permisoRegistrarTrabajoId,
+      keyPermiso: 'EDITAR_CLIENTE',
       nombre: 'Editar Cliente',
       urlMenu: 'home/RegistrarTrabajo',
     },
     {
-      opcionMenuId: menuUsuariosId,
+      permisoId: permisoUsuariosId,
+      keyPermiso: 'USUARIOS',
       nombre: 'Usuarios',
       urlMenu: 'home/Usuarios',
-      opcionMenuPadreId: menuMantenimientoId,
+      permisoPadreId: permisoMantenimientoId,
     },
     {
-      opcionMenuId: menuLugaresAtencionId,
+      permisoId: permisoLugaresAtencionId,
+      keyPermiso: 'ELIMINAR_CLIENTE',
       nombre: 'Eliminar Cliente',
       urlMenu: 'home/LugaresAtencion',
-      opcionMenuPadreId: menuMantenimientoId,
+      permisoPadreId: permisoMantenimientoId,
     },
   ],
   usuariosPerfiles: [
@@ -166,20 +177,20 @@ export const initialData: SeedData = {
     { usuarioId: user2Id, perfilId: perfilTecnicoId },
     { usuarioId: user3Id, perfilId: perfilTecnicoId },
   ],
-  opcionesMenuPerfiles: [
-    { opcionMenuId: menuMantenimientoId, perfilId: perfilAdminId, orden: 1 },
-    { opcionMenuId: menuTipoServicioId, perfilId: perfilAdminId, orden: 2 },
-    { opcionMenuId: menuFallasId, perfilId: perfilAdminId, orden: 3 },
-    { opcionMenuId: menuTipoAsistenciaId, perfilId: perfilAdminId, orden: 4 },
-    { opcionMenuId: menuDetalleTrabajoId, perfilId: perfilAdminId, orden: 5 },
-    { opcionMenuId: menuTrabajosId, perfilId: perfilAdminId, orden: 1 },
-    { opcionMenuId: menuOrdenesTrabajoId, perfilId: perfilAdminId, orden: 2 },
+  permisosPerfiles: [
+    { permisoId: permisoMantenimientoId, perfilId: perfilAdminId, orden: 1 },
+    { permisoId: permisoTipoServicioId, perfilId: perfilAdminId, orden: 2 },
+    { permisoId: permisoFallasId, perfilId: perfilAdminId, orden: 3 },
+    { permisoId: permisoTipoAsistenciaId, perfilId: perfilAdminId, orden: 4 },
+    { permisoId: permisoDetalleTrabajoId, perfilId: perfilAdminId, orden: 5 },
+    { permisoId: permisoTrabajosId, perfilId: perfilAdminId, orden: 1 },
+    { permisoId: permisoOrdenesTrabajoId, perfilId: perfilAdminId, orden: 2 },
     {
-      opcionMenuId: menuRegistrarTrabajoId,
+      permisoId: permisoRegistrarTrabajoId,
       perfilId: perfilTecnicoId,
       orden: 1,
     },
-    { opcionMenuId: menuUsuariosId, perfilId: perfilAdminId, orden: 6 },
-    { opcionMenuId: menuLugaresAtencionId, perfilId: perfilAdminId, orden: 7 },
+    { permisoId: permisoUsuariosId, perfilId: perfilAdminId, orden: 6 },
+    { permisoId: permisoLugaresAtencionId, perfilId: perfilAdminId, orden: 7 },
   ],
 };
