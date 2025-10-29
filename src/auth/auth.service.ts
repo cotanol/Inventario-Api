@@ -86,7 +86,12 @@ export class AuthService {
       const token = this.getJwtToken({ usuarioId: user.usuarioId });
       const newUser = await this.userRepository.findOne({
         where: { usuarioId: user.usuarioId },
-        relations: ['perfilesLink', 'perfilesLink.perfil'],
+        relations: [
+          'perfilesLink',
+          'perfilesLink.perfil',
+          'perfilesLink.perfil.permisosLink',
+          'perfilesLink.perfil.permisosLink.permiso',
+        ],
       });
 
       if (!newUser) {
@@ -127,7 +132,12 @@ export class AuthService {
         fechaModificacion: true,
         clave: true, // Necesario para la validación
       },
-      relations: ['perfilesLink', 'perfilesLink.perfil'],
+      relations: [
+        'perfilesLink',
+        'perfilesLink.perfil',
+        'perfilesLink.perfil.permisosLink',
+        'perfilesLink.perfil.permisosLink.permiso',
+      ],
     });
     if (!user) {
       throw new UnauthorizedException('Invalid credentials');
@@ -146,10 +156,25 @@ export class AuthService {
   }
 
   async checkAuthStatus(user: Usuario) {
+    // Cargar el usuario con todas las relaciones necesarias para los permisos
+    const userWithRelations = await this.userRepository.findOne({
+      where: { usuarioId: user.usuarioId },
+      relations: [
+        'perfilesLink',
+        'perfilesLink.perfil',
+        'perfilesLink.perfil.permisosLink',
+        'perfilesLink.perfil.permisosLink.permiso',
+      ],
+    });
+
+    if (!userWithRelations) {
+      throw new UnauthorizedException('Usuario no encontrado');
+    }
+
     const token = this.getJwtToken({ usuarioId: user.usuarioId });
 
     return {
-      user: this._buildUserResponse(user),
+      user: this._buildUserResponse(userWithRelations),
       token: token,
     };
   }
@@ -169,7 +194,12 @@ export class AuthService {
   async findUserById(id: number) {
     const user = await this.userRepository.findOne({
       where: { usuarioId: id },
-      relations: ['perfilesLink', 'perfilesLink.perfil'],
+      relations: [
+        'perfilesLink',
+        'perfilesLink.perfil',
+        'perfilesLink.perfil.permisosLink',
+        'perfilesLink.perfil.permisosLink.permiso',
+      ],
     });
     if (!user) {
       throw new NotFoundException(`Usuario con ID "${id}" no encontrado.`);
@@ -179,7 +209,12 @@ export class AuthService {
 
   async findAllUsers() {
     const users = await this.userRepository.find({
-      relations: ['perfilesLink', 'perfilesLink.perfil'],
+      relations: [
+        'perfilesLink',
+        'perfilesLink.perfil',
+        'perfilesLink.perfil.permisosLink',
+        'perfilesLink.perfil.permisosLink.permiso',
+      ],
       order: {
         nombres: 'ASC',
       },
@@ -349,6 +384,22 @@ export class AuthService {
     const perfiles =
       user.perfilesLink?.map((link) => link.perfil?.nombre) || [];
 
+    // Extraer todos los permisos únicos del usuario
+    const permisosSet = new Set<string>();
+    user.perfilesLink?.forEach((userProfile) => {
+      if (userProfile.perfil && userProfile.perfil.permisosLink) {
+        userProfile.perfil.permisosLink.forEach((permisoLink) => {
+          if (
+            permisoLink.permiso &&
+            permisoLink.permiso.estadoRegistro &&
+            permisoLink.permiso.keyPermiso
+          ) {
+            permisosSet.add(permisoLink.permiso.keyPermiso);
+          }
+        });
+      }
+    });
+
     return {
       usuarioId: user.usuarioId,
       dni: user.dni,
@@ -361,6 +412,7 @@ export class AuthService {
       fechaCreacion: user.fechaCreacion,
       fechaModificacion: user.fechaModificacion,
       perfiles: perfiles,
+      permisos: Array.from(permisosSet), // Array de keyPermisos únicos
     };
   }
 
