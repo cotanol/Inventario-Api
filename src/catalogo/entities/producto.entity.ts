@@ -34,7 +34,7 @@ export class Producto {
   descripcion: string;
 
   @Column('decimal', {
-    name: 'precio',
+    name: 'precio_venta',
     precision: 10,
     scale: 2,
     transformer: {
@@ -42,7 +42,19 @@ export class Producto {
       from: (value: string) => parseFloat(value),
     },
   })
-  precio: number;
+  precioVenta: number;
+
+  @Column('decimal', {
+    name: 'costo_referencial',
+    precision: 10,
+    scale: 2,
+    nullable: true,
+    transformer: {
+      to: (value: number | null) => value,
+      from: (value: string | null) => (value ? parseFloat(value) : null),
+    },
+  })
+  costoReferencial: number | null;
 
   @Column('boolean', { name: 'estado_registro', default: true })
   estadoRegistro: boolean;

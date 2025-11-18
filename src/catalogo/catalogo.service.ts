@@ -379,7 +379,9 @@ export class CatalogoService {
         // codigo: datosProducto.codigo ?? producto.codigo,
         nombre: datosProducto.nombre ?? producto.nombre,
         descripcion: datosProducto.descripcion ?? producto.descripcion,
-        precio: datosProducto.precio ?? producto.precio,
+        precioVenta: datosProducto.precioVenta ?? producto.precioVenta,
+        costoReferencial:
+          datosProducto.costoReferencial ?? producto.costoReferencial,
         estadoRegistro: datosProducto.estadoRegistro ?? producto.estadoRegistro,
       });
       return await this.productoRepository.save(producto);

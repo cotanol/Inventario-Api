@@ -1,14 +1,14 @@
 import {
   IsInt,
   IsNotEmpty,
-  IsString,
+  IsEnum,
   IsArray,
   ValidateNested,
   ArrayMinSize,
   IsPositive,
-  IsIn,
 } from 'class-validator';
 import { Type } from 'class-transformer';
+import { TipoPago } from '../entities/pedido.entity';
 
 // DTO para cada detalle del pedido
 export class CreateDetallePedidoDto {
@@ -31,12 +31,10 @@ export class CreatePedidoDto {
   @IsNotEmpty()
   vendedorId: number;
 
-  @IsString()
-  @IsNotEmpty()
-  @IsIn(['CONTADO', 'CREDITO'], {
+  @IsEnum(TipoPago, {
     message: 'El tipo de pago debe ser CONTADO o CREDITO',
   })
-  tipoPago: string;
+  tipoPago: TipoPago;
 
   @IsArray()
   @ArrayMinSize(1, { message: 'Debe incluir al menos un producto' })

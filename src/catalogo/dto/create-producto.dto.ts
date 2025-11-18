@@ -36,7 +36,12 @@ export class CreateProductoDto {
 
   @IsNumber({ maxDecimalPlaces: 2 })
   @IsPositive()
-  precio: number;
+  precioVenta: number;
+
+  @IsNumber({ maxDecimalPlaces: 2 })
+  @IsPositive()
+  @IsOptional()
+  costoReferencial?: number;
 
   @IsInt({ message: 'La cantidad actual debe ser un número entero.' })
   @Min(0, { message: 'La cantidad actual no puede ser negativa.' })

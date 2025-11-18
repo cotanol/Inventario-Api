@@ -1,10 +1,9 @@
-import { IsString, IsNotEmpty, IsIn } from 'class-validator';
+import { IsEnum } from 'class-validator';
+import { EstadoPedido } from '../entities/pedido.entity';
 
 export class ChangeEstadoPedidoDto {
-  @IsString()
-  @IsNotEmpty()
-  @IsIn(['PENDIENTE', 'COMPLETADO', 'CANCELADO'], {
+  @IsEnum(EstadoPedido, {
     message: 'El estado del pedido debe ser PENDIENTE, COMPLETADO o CANCELADO',
   })
-  estadoPedido: string;
+  estadoPedido: EstadoPedido;
 }

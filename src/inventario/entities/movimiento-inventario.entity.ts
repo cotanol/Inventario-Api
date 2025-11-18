@@ -5,16 +5,23 @@ import {
   PrimaryGeneratedColumn,
   ManyToOne,
   JoinColumn,
+  Index,
 } from 'typeorm';
 import { Producto } from 'src/catalogo/entities/producto.entity';
-import { Pedido } from 'src/pedidos/entities/pedido.entity';
 
 export enum TipoMovimientoInventario {
   ENTRADA = 'ENTRADA',
   SALIDA = 'SALIDA',
 }
 
+export enum OrigenMovimiento {
+  PEDIDO = 'PEDIDO',
+  COMPRA = 'COMPRA',
+  AJUSTE = 'AJUSTE',
+}
+
 @Entity('movimientos_inventario')
+@Index(['documentoReferenciaId', 'origenMovimiento'])
 export class MovimientoInventario {
   @PrimaryGeneratedColumn({ name: 'movimiento_inventario_id' })
   movimientoInventarioId: number;
@@ -27,11 +34,11 @@ export class MovimientoInventario {
   @JoinColumn({ name: 'producto_id' })
   producto: Producto;
 
-  // --- Tipo de Movimiento ---
+  // --- Tipo de Movimiento (Dirección) ---
   @Column({
-    type: 'varchar',
+    type: 'enum',
+    enum: TipoMovimientoInventario,
     name: 'tipo_movimiento',
-    length: 10,
   })
   tipoMovimiento: TipoMovimientoInventario; // 'ENTRADA' o 'SALIDA'
 
@@ -39,22 +46,30 @@ export class MovimientoInventario {
   @Column('int', { name: 'cantidad' })
   cantidad: number;
 
-  // --- Relación con Pedido (solo para SALIDA) ---
-  @Column('int', { name: 'pedido_id', nullable: true })
-  pedidoId: number;
+  // --- Referencia Polimórfica (Flexible: Pedido, Compra, Ajuste) ---
+  @Column('int', { name: 'documento_referencia_id' })
+  @Index()
+  documentoReferenciaId: number;
 
-  @ManyToOne(() => Pedido, { nullable: true })
-  @JoinColumn({ name: 'pedido_id' })
-  pedido: Pedido;
+  @Column({
+    type: 'enum',
+    enum: OrigenMovimiento,
+    name: 'origen_movimiento',
+  })
+  origenMovimiento: OrigenMovimiento; // 'PEDIDO', 'COMPRA', 'AJUSTE'
 
-  // --- Relación con Compra (solo para ENTRADA) ---
-  // TODO: Agregar cuando se implemente el módulo de compras
-  // @Column('int', { name: 'compra_id', nullable: true })
-  // compraId: number;
-
-  // @ManyToOne(() => Compra, { nullable: true })
-  // @JoinColumn({ name: 'compra_id' })
-  // compra: Compra;
+  // --- Costo Unitario (Kardex - Snapshot Histórico) ---
+  @Column('decimal', {
+    name: 'costo_unitario',
+    precision: 10,
+    scale: 2,
+    default: 0,
+    transformer: {
+      to: (value: number) => value,
+      from: (value: string) => parseFloat(value),
+    },
+  })
+  costoUnitario: number;
 
   // --- Timestamp ---
   @CreateDateColumn({

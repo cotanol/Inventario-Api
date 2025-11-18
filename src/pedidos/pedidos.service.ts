@@ -7,7 +7,7 @@ import {
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, DataSource } from 'typeorm';
 import { Pedido, DetallePedido } from './entities';
-import { estadoPedido } from './entities/pedido.entity';
+import { EstadoPedido } from './entities/pedido.entity';
 import { CreatePedidoDto, ChangeEstadoPedidoDto, UpdatePedidoDto } from './dto';
 import { Cliente } from 'src/clientes/entities/cliente.entity';
 import { Vendedor } from 'src/vendedores/entities/vendedor.entity';
@@ -16,6 +16,7 @@ import { Inventario } from 'src/inventario/entities/inventario.entity';
 import {
   MovimientoInventario,
   TipoMovimientoInventario,
+  OrigenMovimiento,
 } from 'src/inventario/entities/movimiento-inventario.entity';
 import { ReportsService } from 'src/reports/reports.service';
 
@@ -92,13 +93,13 @@ export class PedidosService {
         );
       }
 
-      const subtotal = producto.precio * detalle.cantidad;
+      const subtotal = producto.precioVenta * detalle.cantidad;
       totalNeto += subtotal;
 
       detallesValidados.push({
         productoId: producto.productoId,
         cantidad: detalle.cantidad,
-        precioUnitario: producto.precio,
+        precioUnitario: producto.precioVenta,
         subtotalLinea: subtotal,
       });
     }
@@ -119,7 +120,7 @@ export class PedidosService {
         tipoPago: createPedidoDto.tipoPago,
         totalNeto,
         totalFinal,
-        estadoPedido: estadoPedido.PENDIENTE,
+        estadoPedido: EstadoPedido.PENDIENTE,
         estadoRegistro: true,
       });
 
@@ -180,7 +181,7 @@ export class PedidosService {
     const pedido = await this.findOne(id);
 
     // Solo se pueden actualizar pedidos en estado PENDIENTE
-    if (pedido.estadoPedido !== estadoPedido.PENDIENTE) {
+    if (pedido.estadoPedido !== EstadoPedido.PENDIENTE) {
       throw new BadRequestException(
         'Solo se pueden actualizar pedidos en estado PENDIENTE',
       );
@@ -250,7 +251,7 @@ export class PedidosService {
             );
           }
 
-          const subtotal = producto.precio * detalle.cantidad;
+          const subtotal = producto.precioVenta * detalle.cantidad;
           totalNeto += subtotal;
 
           // Insertar directamente con queryRunner
@@ -258,7 +259,7 @@ export class PedidosService {
             pedidoId: pedido.pedidoId,
             productoId: producto.productoId,
             cantidad: detalle.cantidad,
-            precioUnitario: producto.precio,
+            precioUnitario: producto.precioVenta,
             subtotalLinea: subtotal,
           });
         }
@@ -301,22 +302,22 @@ export class PedidosService {
     const pedido = await this.findOne(id);
 
     // Validar transiciones de estado
-    if (pedido.estadoPedido === estadoPedido.COMPLETADO) {
+    if (pedido.estadoPedido === EstadoPedido.COMPLETADO) {
       throw new BadRequestException(
         'No se puede cambiar el estado de un pedido completado',
       );
     }
 
-    if (pedido.estadoPedido === estadoPedido.CANCELADO) {
+    if (pedido.estadoPedido === EstadoPedido.CANCELADO) {
       throw new BadRequestException(
         'No se puede cambiar el estado de un pedido cancelado',
       );
     }
 
-    const nuevoEstado = changeEstadoDto.estadoPedido as estadoPedido;
+    const nuevoEstado = changeEstadoDto.estadoPedido as EstadoPedido;
 
     // Si se está completando el pedido, validar stock y afectar inventario
-    if (nuevoEstado === estadoPedido.COMPLETADO) {
+    if (nuevoEstado === EstadoPedido.COMPLETADO) {
       await this.completarPedido(pedido);
 
       // Generar el PDF de nota de pedido
@@ -382,12 +383,21 @@ export class PedidosService {
         inventario.cantidadActual -= detalle.cantidad;
         await queryRunner.manager.save(inventario);
 
-        // Crear movimiento de salida
+        // Obtener el costo referencial del producto (snapshot histórico)
+        const producto = await queryRunner.manager.findOne(Producto, {
+          where: { productoId: detalle.productoId },
+        });
+
+        const costoUnitario = producto?.costoReferencial ?? 0;
+
+        // Crear movimiento de salida con patrón polimórfico
         const movimiento = this.movimientoInventarioRepository.create({
           productoId: detalle.productoId,
           tipoMovimiento: TipoMovimientoInventario.SALIDA,
           cantidad: detalle.cantidad,
-          pedidoId: pedido.pedidoId,
+          documentoReferenciaId: pedido.pedidoId,
+          origenMovimiento: OrigenMovimiento.PEDIDO,
+          costoUnitario: costoUnitario,
         });
         await queryRunner.manager.save(movimiento);
       }

@@ -11,12 +11,16 @@ import {
 import { Cliente } from 'src/clientes/entities/cliente.entity';
 import { Vendedor } from 'src/vendedores/entities/vendedor.entity';
 import { DetallePedido } from './detalle-pedido.entity';
-import { MovimientoInventario } from 'src/inventario/entities/movimiento-inventario.entity';
 
-export enum estadoPedido {
+export enum EstadoPedido {
   PENDIENTE = 'PENDIENTE',
   COMPLETADO = 'COMPLETADO',
   CANCELADO = 'CANCELADO',
+}
+
+export enum TipoPago {
+  CONTADO = 'CONTADO',
+  CREDITO = 'CREDITO',
 }
 
 @Entity('pedidos')
@@ -41,8 +45,12 @@ export class Pedido {
   vendedor: Vendedor;
 
   // --- Campos Propios del Pedido ---
-  @Column('varchar', { name: 'tipo_pago', length: 20 })
-  tipoPago: string; // 'CONTADO' o 'CREDITO'
+  @Column({
+    type: 'enum',
+    enum: TipoPago,
+    name: 'tipo_pago',
+  })
+  tipoPago: TipoPago; // 'CONTADO' o 'CREDITO'
 
   @Column('decimal', {
     name: 'total_neto',
@@ -66,10 +74,10 @@ export class Pedido {
   @Column({
     type: 'enum',
     name: 'estado_pedido',
-    enum: estadoPedido,
-    default: estadoPedido.PENDIENTE,
+    enum: EstadoPedido,
+    default: EstadoPedido.PENDIENTE,
   })
-  estadoPedido: estadoPedido; // 'PENDIENTE', 'COMPLETADO', 'CANCELADO'
+  estadoPedido: EstadoPedido; // 'PENDIENTE', 'COMPLETADO', 'CANCELADO'
 
   @Column('boolean', { name: 'estado_registro', default: true })
   estadoRegistro: boolean;
@@ -77,10 +85,6 @@ export class Pedido {
   // --- Relación con Detalles del Pedido ---
   @OneToMany(() => DetallePedido, (detalle) => detalle.pedido)
   detalles: DetallePedido[];
-
-  // --- Relación con Movimientos de Inventario ---
-  @OneToMany(() => MovimientoInventario, (movimiento) => movimiento.pedido)
-  movimientos: MovimientoInventario[];
 
   // --- Timestamps ---
   @CreateDateColumn({ name: 'fecha_creacion', type: 'timestamptz' })
