@@ -38,7 +38,7 @@ export class SeedService {
 
   private async deleteTables() {
     await this.dataSource.query(
-      'TRUNCATE TABLE "usuarios", "perfiles", "permisos", "usuarios_perfiles", "permisos_perfiles", "inventarios", "productos", "marcas", "grupos", "lineas", "clientes", "vendedores" RESTART IDENTITY CASCADE',
+      'TRUNCATE TABLE "movimientos_inventario", "detalles_pedido", "pedidos", "usuarios", "perfiles", "permisos", "usuarios_perfiles", "permisos_perfiles", "inventarios", "productos", "marcas", "grupos", "lineas", "clientes", "vendedores" RESTART IDENTITY CASCADE',
     );
   }
 
