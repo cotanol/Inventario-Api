@@ -9,6 +9,7 @@ import { Producto } from 'src/catalogo/entities/producto.entity';
 import { Inventario } from 'src/inventario/entities/inventario.entity';
 import { MovimientoInventario } from 'src/inventario/entities/movimiento-inventario.entity';
 import { AuthModule } from 'src/auth/auth.module';
+import { ReportsModule } from 'src/reports/reports.module';
 
 @Module({
   imports: [
@@ -21,6 +22,7 @@ import { AuthModule } from 'src/auth/auth.module';
       MovimientoInventario,
     ]),
     AuthModule,
+    ReportsModule,
   ],
   controllers: [ComprasController],
   providers: [ComprasService],

@@ -1,7 +1,19 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Post,
+  Body,
+  Patch,
+  Param,
+  Delete,
+} from '@nestjs/common';
 import { ComprasService } from './compras.service';
 import { CreateCompraDto } from './dto/create-compra.dto';
-import { UpdateCompraDto } from './dto/update-compra.dto';
+import {
+  UpdateCompraDto,
+  ConfirmarOrdenDto,
+  RecibirMercaderiaDto,
+} from './dto/update-compra.dto';
 
 @Controller('compras')
 export class ComprasController {
@@ -30,5 +42,38 @@ export class ComprasController {
   @Delete(':id')
   remove(@Param('id') id: string) {
     return this.comprasService.remove(+id);
+  }
+
+  // ============================================================
+  // ENDPOINTS DE TRANSICIÓN DE ESTADO
+  // ============================================================
+
+  @Patch(':id/confirmar')
+  confirmarOrden(
+    @Param('id') id: string,
+    @Body() confirmarOrdenDto: ConfirmarOrdenDto,
+  ) {
+    return this.comprasService.confirmarOrden(+id, confirmarOrdenDto);
+  }
+
+  @Patch(':id/transito')
+  marcarEnTransito(
+    @Param('id') id: string,
+    @Body() body: { fechaLlegadaEstimada?: string },
+  ) {
+    return this.comprasService.marcarEnTransito(+id, body.fechaLlegadaEstimada);
+  }
+
+  @Patch(':id/recepcion')
+  recibirMercaderia(
+    @Param('id') id: string,
+    @Body() recibirMercaderiaDto: RecibirMercaderiaDto,
+  ) {
+    return this.comprasService.recibirMercaderia(+id, recibirMercaderiaDto);
+  }
+
+  @Patch(':id/cancelar')
+  cancelarCompra(@Param('id') id: string) {
+    return this.comprasService.cancelarCompra(+id);
   }
 }

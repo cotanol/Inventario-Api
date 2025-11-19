@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { billReport } from './documents/bill.report';
 import { notaPedidoReport } from './documents/nota-pedido.report';
+import { ordenCompraReport } from './documents/orden-compra.report';
 import { PrinterService } from 'src/printer/printer.service';
 
 @Injectable()
@@ -29,6 +30,17 @@ export class ReportsService {
   async saveNotaPedidoReport(pedidoData: any): Promise<string> {
     const docDefinition = notaPedidoReport(pedidoData);
     const fileName = `nota-pedido-${pedidoData.pedidoId}`;
+    return this.printer.savePdf(docDefinition, fileName);
+  }
+
+  /**
+   * Genera y guarda el PDF de orden de compra en el servidor
+   * @param compraData Datos de la compra para generar el PDF
+   * @returns Promise con la URL del PDF guardado
+   */
+  async saveOrdenCompraReport(compraData: any): Promise<string> {
+    const docDefinition = ordenCompraReport(compraData);
+    const fileName = `orden-compra-${compraData.compraId}`;
     return this.printer.savePdf(docDefinition, fileName);
   }
 }
