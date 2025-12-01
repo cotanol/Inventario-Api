@@ -120,7 +120,7 @@ export const initialData: SeedData = {
       nombres: 'Carlos',
       apellidoPaterno: 'Rodriguez',
       dni: '99999999',
-      correoElectronico: 'admin@gmail.com',
+      correoElectronico: 'admin@dym.com',
       clave: 'admin@123A',
     },
     {
@@ -130,7 +130,7 @@ export const initialData: SeedData = {
       apellidoMaterno: 'Lopez',
       dni: '88888888',
       celular: '987654321',
-      correoElectronico: 'vendedor@gmail.com',
+      correoElectronico: 'vendedor@dym.com',
       clave: 'vendedor@123A',
     },
   ],
