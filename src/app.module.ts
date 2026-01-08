@@ -32,15 +32,6 @@ import { ComprasModule } from './compras/compras.module';
       imports: [ConfigModule],
       inject: [ConfigService],
       useFactory: (configService: ConfigService) => ({
-        ssl: configService.get<string>('STAGE') === 'prod',
-        extra: {
-          ssl:
-            configService.get<string>('STAGE') === 'prod'
-              ? {
-                  /* Opciones de SSL para producción */
-                }
-              : null,
-        },
         type: 'postgres',
         host: configService.get<string>('DB_HOST'),
         port: configService.get<number>('DB_PORT'),
@@ -49,10 +40,20 @@ import { ComprasModule } from './compras/compras.module';
         password: configService.get<string>('DB_PASSWORD'),
         autoLoadEntities: true,
 
-        // --- ¡ESTE ES EL CAMBIO CLAVE! ---
-        // Sincroniza automáticamente solo si no estamos en producción.
-        synchronize: configService.get<string>('STAGE') !== 'prod',
-        // dropSchema: true,
+        // Usaremos migraciones en lugar de sync
+        synchronize: false,
+
+        // Docker PostgreSQL settings local in vps
+        ssl: false,
+
+        // Logging para debug (desactivar en producción)
+        logging: configService.get<string>('STAGE') === 'dev',
+
+        // Pool de conexiones
+        extra: {
+          max: 5, // Máximo de conexiones en el pool
+          connectionTimeoutMillis: 5000,
+        },
       }),
     }),
 
