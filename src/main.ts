@@ -8,10 +8,15 @@ async function bootstrap() {
 
   app.setGlobalPrefix('inventario-reportes');
 
+  app.enableCors({
+    origin: process.env.FRONTEND_URL || 'http://localhost:5173',
+  });
+
   app.useGlobalPipes(
     new ValidationPipe({
       whitelist: true,
       forbidNonWhitelisted: true,
+      transform: true,
     }),
   );
 
@@ -24,9 +29,9 @@ async function bootstrap() {
   const documentFactory = () => SwaggerModule.createDocument(app, config);
   SwaggerModule.setup('inventario-reportes/docs', app, documentFactory);
 
-  app.enableCors({
-    origin: process.env.FRONTEND_URL || 'http://localhost:5173',
-  });
+
+
+  app.enableShutdownHooks();
 
   await app.listen(process.env.PORT ?? 6040);
 }
