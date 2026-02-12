@@ -4,35 +4,31 @@ import {
   BadRequestException,
   InternalServerErrorException,
 } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
-import { Vendedor } from './entities/vendedor.entity';
 import { CreateVendedorDto, UpdateVendedorDto, ChangeStatusDto } from './dto';
+import { PrismaService } from 'src/prisma/prisma.service';
 
 @Injectable()
 export class VendedoresService {
-  constructor(
-    @InjectRepository(Vendedor)
-    private readonly vendedorRepository: Repository<Vendedor>,
-  ) {}
+  constructor(private readonly prisma: PrismaService) { }
 
-  async create(createVendedorDto: CreateVendedorDto): Promise<Vendedor> {
+  async create(createVendedorDto: CreateVendedorDto) {
     try {
-      const vendedor = this.vendedorRepository.create(createVendedorDto);
-      return await this.vendedorRepository.save(vendedor);
+      return await this.prisma.vendedor.create({
+        data: createVendedorDto,
+      });
     } catch (error) {
       this.handleDBError(error);
     }
   }
 
-  async findAll(): Promise<Vendedor[]> {
-    return await this.vendedorRepository.find({
-      order: { vendedorId: 'ASC' },
+  async findAll() {
+    return await this.prisma.vendedor.findMany({
+      orderBy: { vendedorId: 'asc' },
     });
   }
 
-  async findOne(id: number): Promise<Vendedor> {
-    const vendedor = await this.vendedorRepository.findOne({
+  async findOne(id: number) {
+    const vendedor = await this.prisma.vendedor.findUnique({
       where: { vendedorId: id },
     });
 
@@ -43,15 +39,14 @@ export class VendedoresService {
     return vendedor;
   }
 
-  async update(
-    id: number,
-    updateVendedorDto: UpdateVendedorDto,
-  ): Promise<Vendedor> {
-    const vendedor = await this.findOne(id);
+  async update(id: number, updateVendedorDto: UpdateVendedorDto) {
+    await this.findOne(id);
 
     try {
-      Object.assign(vendedor, updateVendedorDto);
-      return await this.vendedorRepository.save(vendedor);
+      return await this.prisma.vendedor.update({
+        where: { vendedorId: id },
+        data: updateVendedorDto,
+      });
     } catch (error) {
       this.handleDBError(error);
     }
@@ -62,11 +57,13 @@ export class VendedoresService {
     changeStatusDto: ChangeStatusDto,
   ): Promise<{ message: string }> {
     const { estadoRegistro } = changeStatusDto;
-    const result = await this.vendedorRepository.update(id, { estadoRegistro });
 
-    if (result.affected === 0) {
-      throw new NotFoundException(`Vendedor con ID ${id} no encontrado.`);
-    }
+    await this.findOne(id);
+
+    await this.prisma.vendedor.update({
+      where: { vendedorId: id },
+      data: { estadoRegistro },
+    });
 
     return {
       message: `Estado del vendedor actualizado a ${estadoRegistro ? 'activo' : 'inactivo'}.`,
@@ -74,10 +71,10 @@ export class VendedoresService {
   }
 
   private handleDBError(error: any): never {
-    if (error.code === '23505') {
-      // Unique constraint violation
+    if (error.code === 'P2002') {
       throw new BadRequestException(
-        error.detail || 'Ya existe un vendedor con ese DNI o correo.',
+        error.meta?.target?.join(', ') ||
+        'Ya existe un vendedor con ese DNI o correo.',
       );
     }
 

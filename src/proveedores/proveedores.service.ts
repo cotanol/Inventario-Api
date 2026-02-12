@@ -1,30 +1,26 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
 import { CreateProveedorDto } from './dto/create-proveedor.dto';
 import { UpdateProveedorDto } from './dto/update-proveedor.dto';
-import { Proveedor } from './entities/proveedor.entity';
+import { PrismaService } from 'src/prisma/prisma.service';
 
 @Injectable()
 export class ProveedoresService {
-  constructor(
-    @InjectRepository(Proveedor)
-    private readonly proveedorRepository: Repository<Proveedor>,
-  ) {}
+  constructor(private readonly prisma: PrismaService) { }
 
-  async create(createProveedorDto: CreateProveedorDto): Promise<Proveedor> {
-    const proveedor = this.proveedorRepository.create(createProveedorDto);
-    return await this.proveedorRepository.save(proveedor);
-  }
-
-  async findAll(): Promise<Proveedor[]> {
-    return await this.proveedorRepository.find({
-      order: { fechaCreacion: 'DESC' },
+  async create(createProveedorDto: CreateProveedorDto) {
+    return await this.prisma.proveedor.create({
+      data: createProveedorDto,
     });
   }
 
-  async findOne(id: number): Promise<Proveedor> {
-    const proveedor = await this.proveedorRepository.findOne({
+  async findAll() {
+    return await this.prisma.proveedor.findMany({
+      orderBy: { fechaCreacion: 'desc' },
+    });
+  }
+
+  async findOne(id: number) {
+    const proveedor = await this.prisma.proveedor.findUnique({
       where: { proveedorId: id },
     });
 
@@ -35,17 +31,18 @@ export class ProveedoresService {
     return proveedor;
   }
 
-  async update(
-    id: number,
-    updateProveedorDto: UpdateProveedorDto,
-  ): Promise<Proveedor> {
-    const proveedor = await this.findOne(id);
-    Object.assign(proveedor, updateProveedorDto);
-    return await this.proveedorRepository.save(proveedor);
+  async update(id: number, updateProveedorDto: UpdateProveedorDto) {
+    await this.findOne(id);
+    return await this.prisma.proveedor.update({
+      where: { proveedorId: id },
+      data: updateProveedorDto,
+    });
   }
 
-  async remove(id: number): Promise<void> {
-    const proveedor = await this.findOne(id);
-    await this.proveedorRepository.remove(proveedor);
+  async remove(id: number) {
+    await this.findOne(id);
+    await this.prisma.proveedor.delete({
+      where: { proveedorId: id },
+    });
   }
 }

@@ -1,9 +1,3 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
-// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
-// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
-
 generator client {
   provider     = "prisma-client"
   output       = "../generated/prisma"
@@ -14,11 +8,375 @@ datasource db {
   provider = "postgresql"
 }
 
-model User {
-  id       Int    @id @default(autoincrement())
-  name     String
-  email    String @unique
-  password String
+// ========================
+// AUTH
+// ========================
 
-  @@map("users")
+model Usuario {
+  usuarioId          Int      @id @default(autoincrement()) @map("usuario_id")
+  dni                String   @unique @db.VarChar(20)
+  nombre             String   @db.VarChar(100)
+  apellido           String   @db.VarChar(100)
+  email              String   @unique @db.VarChar(150)
+  password           String   @db.VarChar(255)
+  estadoRegistro     Boolean  @default(true) @map("estado_registro")
+  fechaCreacion      DateTime @default(now()) @map("fecha_creacion")
+  fechaActualizacion DateTime @updatedAt @map("fecha_actualizacion")
+
+  perfiles UsuarioPerfil[]
+
+  @@map("usuario")
+}
+
+model Perfil {
+  perfilId           Int      @id @default(autoincrement()) @map("perfil_id")
+  nombre             String   @unique @db.VarChar(100)
+  descripcion        String?  @db.VarChar(255)
+  estadoRegistro     Boolean  @default(true) @map("estado_registro")
+  fechaCreacion      DateTime @default(now()) @map("fecha_creacion")
+  fechaActualizacion DateTime @updatedAt @map("fecha_actualizacion")
+
+  usuarios UsuarioPerfil[]
+  permisos PermisoPerfil[]
+
+  @@map("perfil")
+}
+
+enum TipoPermiso {
+  MENU
+  ACCION
+}
+
+model Permiso {
+  permisoId          Int         @id @default(autoincrement()) @map("permiso_id")
+  nombre             String      @db.VarChar(100)
+  descripcion        String?     @db.VarChar(255)
+  tipo               TipoPermiso
+  ruta               String?     @db.VarChar(255)
+  icono              String?     @db.VarChar(100)
+  orden              Int         @default(0)
+  estadoRegistro     Boolean     @default(true) @map("estado_registro")
+  fechaCreacion      DateTime    @default(now()) @map("fecha_creacion")
+  fechaActualizacion DateTime    @updatedAt @map("fecha_actualizacion")
+
+  permisoPadreId Int?      @map("permiso_padre_id")
+  permisoPadre   Permiso?  @relation("PermisoJerarquia", fields: [permisoPadreId], references: [permisoId])
+  permisosHijos  Permiso[] @relation("PermisoJerarquia")
+
+  perfiles PermisoPerfil[]
+
+  @@map("permiso")
+}
+
+model PermisoPerfil {
+  permisoId Int @map("permiso_id")
+  perfilId  Int @map("perfil_id")
+  orden     Int @default(0)
+
+  permiso Permiso @relation(fields: [permisoId], references: [permisoId])
+  perfil  Perfil  @relation(fields: [perfilId], references: [perfilId])
+
+  @@id([permisoId, perfilId])
+  @@map("permiso_perfil")
+}
+
+model UsuarioPerfil {
+  usuarioId Int @map("usuario_id")
+  perfilId  Int @map("perfil_id")
+
+  usuario Usuario @relation(fields: [usuarioId], references: [usuarioId])
+  perfil  Perfil  @relation(fields: [perfilId], references: [perfilId])
+
+  @@id([usuarioId, perfilId])
+  @@map("usuario_perfil")
+}
+
+// ========================
+// CATALOGO
+// ========================
+
+model Linea {
+  lineaId            Int      @id @default(autoincrement()) @map("linea_id")
+  nombre             String   @unique @db.VarChar(100)
+  descripcion        String?  @db.VarChar(255)
+  estadoRegistro     Boolean  @default(true) @map("estado_registro")
+  fechaCreacion      DateTime @default(now()) @map("fecha_creacion")
+  fechaActualizacion DateTime @updatedAt @map("fecha_actualizacion")
+
+  grupos Grupo[]
+
+  @@map("linea")
+}
+
+model Grupo {
+  grupoId            Int      @id @default(autoincrement()) @map("grupo_id")
+  nombre             String   @db.VarChar(100)
+  descripcion        String?  @db.VarChar(255)
+  estadoRegistro     Boolean  @default(true) @map("estado_registro")
+  fechaCreacion      DateTime @default(now()) @map("fecha_creacion")
+  fechaActualizacion DateTime @updatedAt @map("fecha_actualizacion")
+
+  lineaId Int   @map("linea_id")
+  linea   Linea @relation(fields: [lineaId], references: [lineaId])
+
+  productos Producto[]
+
+  @@map("grupo")
+}
+
+model Marca {
+  marcaId            Int      @id @default(autoincrement()) @map("marca_id")
+  nombre             String   @unique @db.VarChar(100)
+  descripcion        String?  @db.VarChar(255)
+  estadoRegistro     Boolean  @default(true) @map("estado_registro")
+  fechaCreacion      DateTime @default(now()) @map("fecha_creacion")
+  fechaActualizacion DateTime @updatedAt @map("fecha_actualizacion")
+
+  productos Producto[]
+
+  @@map("marca")
+}
+
+model Producto {
+  productoId         Int      @id @default(autoincrement()) @map("producto_id")
+  codigo             String?  @unique @db.VarChar(50)
+  nombre             String   @db.VarChar(200)
+  descripcion        String?  @db.Text
+  precioVenta        Decimal  @map("precio_venta") @db.Decimal(12, 2)
+  costoUnitario      Decimal  @default(0) @map("costo_unitario") @db.Decimal(12, 2)
+  unidadMedida       String   @default("UNIDAD") @map("unidad_medida") @db.VarChar(50)
+  estadoRegistro     Boolean  @default(true) @map("estado_registro")
+  fechaCreacion      DateTime @default(now()) @map("fecha_creacion")
+  fechaActualizacion DateTime @updatedAt @map("fecha_actualizacion")
+
+  grupoId Int   @map("grupo_id")
+  grupo   Grupo @relation(fields: [grupoId], references: [grupoId])
+
+  marcaId Int   @map("marca_id")
+  marca   Marca @relation(fields: [marcaId], references: [marcaId])
+
+  inventario     Inventario?
+  movimientos    MovimientoInventario[]
+  detallesPedido DetallePedido[]
+  detallesCompra DetalleCompra[]
+
+  @@map("producto")
+}
+
+// ========================
+// INVENTARIO
+// ========================
+
+model Inventario {
+  inventarioId       Int      @id @default(autoincrement()) @map("inventario_id")
+  cantidadActual     Int      @default(0) @map("cantidad_actual")
+  cantidadMinima     Int      @default(0) @map("cantidad_minima")
+  estadoRegistro     Boolean  @default(true) @map("estado_registro")
+  fechaCreacion      DateTime @default(now()) @map("fecha_creacion")
+  fechaActualizacion DateTime @updatedAt @map("fecha_actualizacion")
+
+  productoId Int      @unique @map("producto_id")
+  producto   Producto @relation(fields: [productoId], references: [productoId])
+
+  @@map("inventario")
+}
+
+enum TipoMovimientoInventario {
+  ENTRADA
+  SALIDA
+}
+
+enum OrigenMovimiento {
+  PEDIDO
+  COMPRA
+  AJUSTE
+}
+
+model MovimientoInventario {
+  movimientoId          Int                      @id @default(autoincrement()) @map("movimiento_id")
+  tipo                  TipoMovimientoInventario
+  cantidad              Int
+  costoUnitario         Decimal                  @default(0) @map("costo_unitario") @db.Decimal(12, 2)
+  documentoReferenciaId Int?                     @map("documento_referencia_id")
+  origenMovimiento      OrigenMovimiento         @map("origen_movimiento")
+  observacion           String?                  @db.Text
+  fechaCreacion         DateTime                 @default(now()) @map("fecha_creacion")
+
+  productoId Int      @map("producto_id")
+  producto   Producto @relation(fields: [productoId], references: [productoId])
+
+  @@index([documentoReferenciaId, origenMovimiento])
+  @@map("movimiento_inventario")
+}
+
+// ========================
+// VENDEDORES
+// ========================
+
+model Vendedor {
+  vendedorId        Int       @id @default(autoincrement()) @map("vendedor_id")
+  nombres           String    @db.VarChar(50)
+  apellidoPaterno   String    @map("apellido_paterno") @db.VarChar(50)
+  apellidoMaterno   String?   @map("apellido_materno") @db.VarChar(50)
+  dni               String    @unique @db.VarChar(8)
+  correo            String    @unique @db.VarChar(100)
+  estadoRegistro    Boolean   @default(true) @map("estado_registro")
+  fechaCreacion     DateTime  @default(now()) @map("fecha_creacion")
+  fechaModificacion DateTime? @updatedAt @map("fecha_modificacion")
+
+  clientes Cliente[]
+  pedidos  Pedido[]
+
+  @@map("vendedores")
+}
+
+// ========================
+// CLIENTES
+// ========================
+
+model Cliente {
+  clienteId         Int       @id @default(autoincrement()) @map("cliente_id")
+  nombre            String    @db.VarChar(50)
+  ruc               String    @unique @db.VarChar(11)
+  direccion         String    @db.VarChar(50)
+  telefono          String?   @db.VarChar(50)
+  email             String    @unique @db.VarChar(100)
+  clasificacion     String    @db.VarChar(50)
+  departamento      String    @db.VarChar(50)
+  provincia         String    @db.VarChar(50)
+  distrito          String    @db.VarChar(50)
+  estadoRegistro    Boolean   @default(true) @map("estado_registro")
+  fechaCreacion     DateTime  @default(now()) @map("fecha_creacion")
+  fechaModificacion DateTime? @updatedAt @map("fecha_modificacion")
+
+  vendedorId Int      @map("vendedor_id")
+  vendedor   Vendedor @relation(fields: [vendedorId], references: [vendedorId])
+
+  pedidos Pedido[]
+
+  @@map("clientes")
+}
+
+// ========================
+// PROVEEDORES
+// ========================
+
+model Proveedor {
+  proveedorId                Int       @id @default(autoincrement()) @map("proveedor_id")
+  nombreEmpresa              String    @map("nombre_empresa") @db.VarChar(100)
+  contactoNombre             String?   @map("contacto_nombre") @db.VarChar(100)
+  telefono                   String?   @db.VarChar(20)
+  email                      String?   @db.VarChar(100)
+  numeroIdentificacionFiscal String    @unique @map("numero_identificacion_fiscal") @db.VarChar(20)
+  direccion                  String?   @db.Text
+  pais                       String    @db.VarChar(50)
+  estadoRegistro             Boolean   @default(true) @map("estado_registro")
+  fechaCreacion              DateTime  @default(now()) @map("fecha_creacion")
+  fechaModificacion          DateTime? @updatedAt @map("fecha_modificacion")
+
+  compras Compra[]
+
+  @@map("proveedores")
+}
+
+// ========================
+// PEDIDOS
+// ========================
+
+enum EstadoPedido {
+  PENDIENTE
+  COMPLETADO
+  CANCELADO
+}
+
+enum TipoPago {
+  CONTADO
+  CREDITO
+}
+
+model Pedido {
+  pedidoId           Int          @id @default(autoincrement()) @map("pedido_id")
+  estado             EstadoPedido @default(PENDIENTE)
+  tipoPago           TipoPago     @default(CONTADO) @map("tipo_pago")
+  subtotal           Decimal      @default(0) @db.Decimal(12, 2)
+  igv                Decimal      @default(0) @db.Decimal(12, 2)
+  total              Decimal      @default(0) @db.Decimal(12, 2)
+  observaciones      String?      @db.Text
+  pdfUrl             String?      @map("pdf_url") @db.VarChar(255)
+  estadoRegistro     Boolean      @default(true) @map("estado_registro")
+  fechaCreacion      DateTime     @default(now()) @map("fecha_creacion")
+  fechaActualizacion DateTime     @updatedAt @map("fecha_actualizacion")
+
+  clienteId Int     @map("cliente_id")
+  cliente   Cliente @relation(fields: [clienteId], references: [clienteId])
+
+  vendedorId Int      @map("vendedor_id")
+  vendedor   Vendedor @relation(fields: [vendedorId], references: [vendedorId])
+
+  detalles DetallePedido[]
+
+  @@map("pedido")
+}
+
+model DetallePedido {
+  detalleId      Int     @id @default(autoincrement()) @map("detalle_id")
+  cantidad       Int
+  precioUnitario Decimal @map("precio_unitario") @db.Decimal(12, 2)
+  subtotal       Decimal @db.Decimal(12, 2)
+
+  pedidoId Int    @map("pedido_id")
+  pedido   Pedido @relation(fields: [pedidoId], references: [pedidoId])
+
+  productoId Int      @map("producto_id")
+  producto   Producto @relation(fields: [productoId], references: [productoId])
+
+  @@map("detalle_pedido")
+}
+
+// ========================
+// COMPRAS
+// ========================
+
+enum EstadoCompra {
+  BORRADOR
+  ORDENADO
+  EN_TRANSITO
+  COMPLETADO
+  CANCELADO
+}
+
+model Compra {
+  compraId             Int          @id @default(autoincrement()) @map("compra_id")
+  estado               EstadoCompra @default(BORRADOR)
+  fechaOrden           DateTime?    @map("fecha_orden")
+  fechaEntregaEstimada DateTime?    @map("fecha_entrega_estimada")
+  total                Decimal      @default(0) @db.Decimal(12, 2)
+  observaciones        String?      @db.Text
+  pdfUrl               String?      @map("pdf_url") @db.VarChar(255)
+  estadoRegistro       Boolean      @default(true) @map("estado_registro")
+  fechaCreacion        DateTime     @default(now()) @map("fecha_creacion")
+  fechaActualizacion   DateTime     @updatedAt @map("fecha_actualizacion")
+
+  proveedorId Int       @map("proveedor_id")
+  proveedor   Proveedor @relation(fields: [proveedorId], references: [proveedorId])
+
+  detalles DetalleCompra[]
+
+  @@map("compra")
+}
+
+model DetalleCompra {
+  detalleId          Int     @id @default(autoincrement()) @map("detalle_id")
+  cantidadSolicitada Int     @map("cantidad_solicitada")
+  cantidadRecibida   Int     @default(0) @map("cantidad_recibida")
+  costoUnitario      Decimal @map("costo_unitario") @db.Decimal(12, 2)
+  subtotal           Decimal @db.Decimal(12, 2)
+
+  compraId Int    @map("compra_id")
+  compra   Compra @relation(fields: [compraId], references: [compraId], onDelete: Cascade)
+
+  productoId Int      @map("producto_id")
+  producto   Producto @relation(fields: [productoId], references: [productoId])
+
+  @@map("detalle_compra")
 }
