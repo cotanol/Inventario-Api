@@ -1,7 +1,6 @@
 import { Module } from '@nestjs/common';
-import { ConfigModule, ConfigService } from '@nestjs/config';
+import { ConfigModule } from '@nestjs/config';
 import { AuthModule } from './auth/auth.module';
-import { SeedModule } from './seed/seed.module';
 import { CatalogoModule } from './catalogo/catalogo.module';
 import { InventarioModule } from './inventario/inventario.module';
 import { ClientesModule } from './clientes/clientes.module';
@@ -28,7 +27,6 @@ import { PrismaModule } from './prisma/prisma.module';
     }),
 
     AuthModule,
-    SeedModule,
     CatalogoModule,
     InventarioModule,
     ClientesModule,
@@ -41,4 +39,4 @@ import { PrismaModule } from './prisma/prisma.module';
     PrismaModule,
   ],
 })
-export class AppModule { }
+export class AppModule {}

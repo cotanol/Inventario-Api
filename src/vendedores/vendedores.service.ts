@@ -4,12 +4,15 @@ import {
   BadRequestException,
   InternalServerErrorException,
 } from '@nestjs/common';
+import { Prisma } from 'generated/prisma/client';
 import { CreateVendedorDto, UpdateVendedorDto, ChangeStatusDto } from './dto';
 import { PrismaService } from 'src/prisma/prisma.service';
+import { PaginationQueryDto } from 'src/common/dto/pagination-query.dto';
+import { buildPaginationMeta } from 'src/common/utils/pagination.util';
 
 @Injectable()
 export class VendedoresService {
-  constructor(private readonly prisma: PrismaService) { }
+  constructor(private readonly prisma: PrismaService) {}
 
   async create(createVendedorDto: CreateVendedorDto) {
     try {
@@ -21,10 +24,31 @@ export class VendedoresService {
     }
   }
 
-  async findAll() {
-    return await this.prisma.vendedor.findMany({
-      orderBy: { vendedorId: 'asc' },
-    });
+  async findAll(query: PaginationQueryDto) {
+    const currentPage = query.page ?? 1;
+    const itemsPerPage = query.limit ?? 10;
+    const skip = (currentPage - 1) * itemsPerPage;
+
+    const [items, totalItems] = await Promise.all([
+      this.prisma.vendedor.findMany({
+        orderBy: { vendedorId: 'asc' },
+        skip,
+        take: itemsPerPage,
+      }),
+      this.prisma.vendedor.count(),
+    ]);
+
+    return {
+      items,
+      meta: {
+        pagination: buildPaginationMeta({
+          totalItems,
+          itemCount: items.length,
+          itemsPerPage,
+          currentPage,
+        }),
+      },
+    };
   }
 
   async findOne(id: number) {
@@ -70,11 +94,15 @@ export class VendedoresService {
     };
   }
 
-  private handleDBError(error: any): never {
-    if (error.code === 'P2002') {
+  private handleDBError(error: unknown): never {
+    if (
+      error instanceof Prisma.PrismaClientKnownRequestError &&
+      error.code === 'P2002'
+    ) {
       throw new BadRequestException(
-        error.meta?.target?.join(', ') ||
-        'Ya existe un vendedor con ese DNI o correo.',
+        Array.isArray(error.meta?.target)
+          ? error.meta.target.join(', ')
+          : 'Ya existe un vendedor con ese DNI o correo.',
       );
     }
 

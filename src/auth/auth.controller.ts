@@ -6,12 +6,12 @@ import {
   Param,
   ParseIntPipe,
   Patch,
+  Query,
 } from '@nestjs/common';
 import { AuthService } from './auth.service';
 import { CreateUserDto, LoginUserDto } from './dto';
 
 import { GetUser } from './decorators/get-user.decorator';
-import { Usuario } from './entities/usuario.entity';
 
 import { ValidPermissions } from './interfaces/valid-permissions.interface';
 import { RequirePermissions } from './decorators/require-permissions.decorator';
@@ -25,6 +25,14 @@ import { ChangeStatusDto } from './dto/change-status.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { UpdatePerfilDto } from './dto/update-perfil.dto';
 import { CreatePerfilDto } from './dto/create-perfil.dto';
+import { AuthenticatedUser } from './interfaces/authenticated-user.interface';
+import { PaginationQueryDto } from 'src/common/dto/pagination-query.dto';
+import {
+  ApiPaginationQueryDocs,
+  ApiStandardItemResponse,
+  ApiStandardListResponse,
+} from 'src/common/swagger/api-standard-response.decorator';
+import { swaggerExamples } from 'src/common/swagger/examples';
 
 @ApiTags('Auth')
 @Controller('auth')
@@ -51,6 +59,9 @@ export class AuthController {
     description: 'Forbidden: No tienes el permiso CREAR_USUARIO.',
   })
   @RequirePermissions(ValidPermissions.CREAR_USUARIO)
+  @ApiStandardItemResponse('Usuario creado correctamente', 'created', {
+    dataExample: swaggerExamples.authSession,
+  })
   async register(@Body() createUserDto: CreateUserDto) {
     return this.authService.create(createUserDto);
   }
@@ -68,6 +79,9 @@ export class AuthController {
   @ApiResponse({
     status: 401,
     description: 'Unauthorized: Credenciales inválidas.',
+  })
+  @ApiStandardItemResponse('Sesion iniciada correctamente', 'ok', {
+    dataExample: swaggerExamples.authSession,
   })
   async login(@Body() loginUserDto: LoginUserDto) {
     return this.authService.login(loginUserDto);
@@ -89,7 +103,14 @@ export class AuthController {
     description: 'Forbidden: El token no es válido o ha expirado.',
   })
   @RequirePermissions()
-  checkAuthStatus(@GetUser() user: Usuario) {
+  @ApiStandardItemResponse(
+    'Estado de autenticacion validado correctamente',
+    'ok',
+    {
+      dataExample: swaggerExamples.authSession,
+    },
+  )
+  checkAuthStatus(@GetUser() user: AuthenticatedUser) {
     return this.authService.checkAuthStatus(user);
   }
 
@@ -107,7 +128,11 @@ export class AuthController {
     description: 'Forbidden: El token no es válido o ha expirado.',
   })
   @RequirePermissions() // Solo requiere autenticación
-  getMenu(@GetUser() user: Usuario) {
+  @ApiStandardItemResponse('Menu generado correctamente', 'ok', {
+    dataExample: swaggerExamples.menu,
+    isArray: true,
+  })
+  getMenu(@GetUser() user: AuthenticatedUser) {
     return this.authService.getMenuForUser(user);
   }
 
@@ -125,8 +150,10 @@ export class AuthController {
     description: 'Forbidden: No tienes el permiso VER_PERFILES.',
   })
   @RequirePermissions(ValidPermissions.VER_PERFILES)
-  findAllPerfiles() {
-    return this.authService.findAllPerfiles();
+  @ApiPaginationQueryDocs()
+  @ApiStandardListResponse('Lista paginada de perfiles', swaggerExamples.perfil)
+  findAllPerfiles(@Query() paginationQuery: PaginationQueryDto) {
+    return this.authService.findAllPerfiles(paginationQuery);
   }
 
   //  Listar todos los usuarios ---
@@ -143,8 +170,13 @@ export class AuthController {
     description: 'Forbidden: No tienes el permiso VER_USUARIOS.',
   })
   @RequirePermissions(ValidPermissions.VER_USUARIOS)
-  findAllUsers() {
-    return this.authService.findAllUsers();
+  @ApiPaginationQueryDocs()
+  @ApiStandardListResponse(
+    'Lista paginada de usuarios',
+    swaggerExamples.authUser,
+  )
+  findAllUsers(@Query() paginationQuery: PaginationQueryDto) {
+    return this.authService.findAllUsers(paginationQuery);
   }
 
   @Patch('change-status/:id')
@@ -168,6 +200,13 @@ export class AuthController {
     description: 'Not Found: Usuario no encontrado.',
   })
   @RequirePermissions(ValidPermissions.EDITAR_USUARIO)
+  @ApiStandardItemResponse(
+    'Estado de usuario actualizado correctamente',
+    'ok',
+    {
+      dataExample: swaggerExamples.statusMessage,
+    },
+  )
   changeStatus(
     @Param('id', ParseIntPipe) id: number,
     @Body() changeStatusDto: ChangeStatusDto,
@@ -195,6 +234,9 @@ export class AuthController {
     description: 'Not Found: Usuario no encontrado.',
   })
   @RequirePermissions(ValidPermissions.VER_USUARIOS)
+  @ApiStandardItemResponse('Usuario obtenido correctamente', 'ok', {
+    dataExample: swaggerExamples.authUser,
+  })
   getUserById(@Param('id', ParseIntPipe) id: number) {
     return this.authService.findUserById(id);
   }
@@ -223,6 +265,9 @@ export class AuthController {
     description: 'Not Found: Usuario no encontrado.',
   })
   @RequirePermissions(ValidPermissions.EDITAR_USUARIO)
+  @ApiStandardItemResponse('Usuario actualizado correctamente', 'ok', {
+    dataExample: swaggerExamples.authUser,
+  })
   update(
     @Param('id', ParseIntPipe) id: number,
     @Body() updateUserDto: UpdateUserDto,
@@ -232,24 +277,38 @@ export class AuthController {
 
   @Get('permisos')
   @RequirePermissions(ValidPermissions.VER_PERFILES)
-  findAllPermisos() {
-    return this.authService.findAllPermisos();
+  @ApiPaginationQueryDocs()
+  @ApiStandardListResponse(
+    'Lista paginada de permisos',
+    swaggerExamples.permiso,
+  )
+  findAllPermisos(@Query() paginationQuery: PaginationQueryDto) {
+    return this.authService.findAllPermisos(paginationQuery);
   }
 
   @Post('perfiles')
   @RequirePermissions(ValidPermissions.CREAR_PERFIL)
+  @ApiStandardItemResponse('Perfil creado correctamente', 'created', {
+    dataExample: swaggerExamples.perfil,
+  })
   createPerfil(@Body() createPerfilDto: CreatePerfilDto) {
     return this.authService.createPerfil(createPerfilDto);
   }
 
   @Get('perfiles/:id')
   @RequirePermissions(ValidPermissions.VER_PERFILES)
+  @ApiStandardItemResponse('Perfil obtenido correctamente', 'ok', {
+    dataExample: swaggerExamples.perfil,
+  })
   findOnePerfil(@Param('id', ParseIntPipe) id: number) {
     return this.authService.findOnePerfil(id);
   }
 
   @Patch('perfiles/:id')
   @RequirePermissions(ValidPermissions.EDITAR_PERFIL)
+  @ApiStandardItemResponse('Perfil actualizado correctamente', 'ok', {
+    dataExample: swaggerExamples.perfil,
+  })
   updatePerfil(
     @Param('id', ParseIntPipe) id: number,
     @Body() updatePerfilDto: UpdatePerfilDto,
@@ -259,6 +318,9 @@ export class AuthController {
 
   @Patch('perfiles/:id/change-status')
   @RequirePermissions(ValidPermissions.EDITAR_PERFIL)
+  @ApiStandardItemResponse('Estado de perfil actualizado correctamente', 'ok', {
+    dataExample: swaggerExamples.statusMessage,
+  })
   changeStatusPerfil(
     @Param('id', ParseIntPipe) id: number,
     @Body() changeStatusDto: ChangeStatusDto,

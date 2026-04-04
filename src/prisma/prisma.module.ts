@@ -15,8 +15,8 @@ import { PrismaPg } from '@prisma/adapter-pg';
         const connectionString = configService.get<string>('DATABASE_URL');
         const pool = new Pool({
           connectionString,
-          max: 10,                      // Máximo de conexiones simultáneas
-          idleTimeoutMillis: 30_000,    // Cerrar conexiones inactivas después de 30s
+          max: 10, // Máximo de conexiones simultáneas
+          idleTimeoutMillis: 30_000, // Cerrar conexiones inactivas después de 30s
           connectionTimeoutMillis: 5_000, // Timeout para obtener una conexión
           //TODO: Configurar SSL dependiendo el metodo elegido de despliegue
         });
@@ -29,4 +29,4 @@ import { PrismaPg } from '@prisma/adapter-pg';
   ],
   exports: [PrismaService],
 })
-export class PrismaModule { }
+export class PrismaModule {}

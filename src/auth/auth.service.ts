@@ -1,373 +1,590 @@
 import {
   BadRequestException,
-  HttpException,
+  ConflictException,
   Injectable,
   InternalServerErrorException,
   NotFoundException,
   UnauthorizedException,
 } from '@nestjs/common';
-import { CreateUserDto } from './dto';
-import { InjectRepository } from '@nestjs/typeorm';
-import { Usuario } from './entities/usuario.entity';
-import { DataSource, In, Repository } from 'typeorm';
-import * as bcrypt from 'bcrypt';
-import { LoginUserDto } from './dto/login-user.dto';
-import { JwtPayLoad } from './interfaces/jwt-payload.interface';
 import { JwtService } from '@nestjs/jwt';
-import { UsuarioPerfil } from './entities/usuario-perfil.entity';
-import { Perfil } from './entities/perfil.entity';
-import { Permiso } from './entities/permiso.entity';
+import * as bcrypt from 'bcrypt';
+import { Prisma } from 'generated/prisma/client';
+
+import { PrismaService } from 'src/prisma/prisma.service';
+import { PaginationQueryDto } from 'src/common/dto/pagination-query.dto';
+import { buildPaginationMeta } from 'src/common/utils/pagination.util';
+
 import { ChangeStatusDto } from './dto/change-status.dto';
-import { UpdateUserDto } from './dto/update-user.dto';
-import { PermisoPerfil } from './entities/permiso-perfil.entity';
-import { UpdatePerfilDto } from './dto/update-perfil.dto';
 import { CreatePerfilDto } from './dto/create-perfil.dto';
+import { CreateUserDto } from './dto/create-user.dto';
+import { LoginUserDto } from './dto/login-user.dto';
+import { UpdatePerfilDto } from './dto/update-perfil.dto';
+import { UpdateUserDto } from './dto/update-user.dto';
+import { AuthenticatedUser } from './interfaces/authenticated-user.interface';
+import { JwtPayLoad } from './interfaces/jwt-payload.interface';
+
+const userAuthInclude = {
+  perfiles: {
+    include: {
+      perfil: {
+        include: {
+          permisos: {
+            include: {
+              permiso: true,
+            },
+          },
+        },
+      },
+    },
+  },
+} satisfies Prisma.UsuarioInclude;
+
+const perfilWithPermisosInclude = {
+  permisos: {
+    include: {
+      permiso: true,
+    },
+    orderBy: {
+      orden: 'asc',
+    },
+  },
+} satisfies Prisma.PerfilInclude;
 
 @Injectable()
 export class AuthService {
   constructor(
-    @InjectRepository(Usuario) private userRepository: Repository<Usuario>,
-    @InjectRepository(UsuarioPerfil)
-    private usuarioPerfilRepository: Repository<UsuarioPerfil>,
-    @InjectRepository(Perfil)
-    private perfilRepository: Repository<Perfil>,
-    @InjectRepository(Permiso)
-    private permisoRepository: Repository<Permiso>,
-    @InjectRepository(PermisoPerfil)
-    private permisoPerfilRepository: Repository<PermisoPerfil>,
-    private dataSource: DataSource,
+    private readonly prisma: PrismaService,
     private readonly jwtService: JwtService,
   ) {}
 
   async create(createUserDto: CreateUserDto) {
-    // 1. Destructuramos correctamente, separando los IDs de los perfiles.
     const { clave, perfilesIds, ...userData } = createUserDto;
 
-    // 2. Iniciamos una transacción para asegurar la integridad de los datos.
-    const queryRunner = this.dataSource.createQueryRunner();
-    await queryRunner.connect();
-    await queryRunner.startTransaction();
+    const perfiles = await this.prisma.perfil.findMany({
+      where: {
+        perfilId: { in: perfilesIds },
+      },
+      select: { perfilId: true },
+    });
+
+    if (perfiles.length !== perfilesIds.length) {
+      throw new BadRequestException('Uno o mas IDs de perfil no son validos.');
+    }
 
     try {
       const hashedPassword = await bcrypt.hash(clave, 10);
-      const emailLower = userData.correoElectronico.toLocaleLowerCase().trim();
+      const emailLower = userData.correoElectronico.toLowerCase().trim();
 
-      const user = this.userRepository.create({
-        ...userData,
-        clave: hashedPassword,
-        correoElectronico: emailLower,
-      });
-      // Guardamos el usuario dentro de la transacción
-      await queryRunner.manager.save(user);
+      const createdUser = await this.prisma.$transaction(async (tx) => {
+        const user = await tx.usuario.create({
+          data: {
+            dni: userData.dni,
+            nombre: userData.nombres,
+            apellido: this.joinApellidos(
+              userData.apellidoPaterno,
+              userData.apellidoMaterno,
+            ),
+            email: emailLower,
+            password: hashedPassword,
+          },
+        });
 
-      // 3. Verificamos que los perfiles enviados existan.
-      const perfiles = await this.perfilRepository.findBy({
-        perfilId: In(perfilesIds),
-      });
-      if (perfiles.length !== perfilesIds.length) {
-        throw new BadRequestException(
-          'Uno o más IDs de perfil no son válidos.',
-        );
-      }
+        await tx.usuarioPerfil.createMany({
+          data: perfilesIds.map((perfilId) => ({
+            usuarioId: user.usuarioId,
+            perfilId,
+          })),
+        });
 
-      // 4. Creamos los registros en la tabla pivote 'usuarios_perfiles'.
-      const userProfiles = perfiles.map((perfil) =>
-        this.usuarioPerfilRepository.create({
-          usuarioId: user.usuarioId,
-          perfilId: perfil.perfilId,
-        }),
-      );
-      // Guardamos las relaciones de perfil dentro de la transacción
-      await queryRunner.manager.save(userProfiles);
-
-      // 5. Si todo salió bien, confirmamos la transacción.
-      await queryRunner.commitTransaction();
-
-      const token = this.getJwtToken({ usuarioId: user.usuarioId });
-      const newUser = await this.userRepository.findOne({
-        where: { usuarioId: user.usuarioId },
-        relations: [
-          'perfilesLink',
-          'perfilesLink.perfil',
-          'perfilesLink.perfil.permisosLink',
-          'perfilesLink.perfil.permisosLink.permiso',
-        ],
+        return tx.usuario.findUnique({
+          where: { usuarioId: user.usuarioId },
+          include: userAuthInclude,
+        });
       });
 
-      if (!newUser) {
+      if (!createdUser) {
         throw new InternalServerErrorException(
-          'Error al crear el usuario: no se pudo encontrar el usuario recién guardado.',
+          'Error al crear el usuario: no se pudo recuperar el registro.',
         );
       }
+
+      const token = this.getJwtToken({ usuarioId: createdUser.usuarioId });
 
       return {
-        user: this._buildUserResponse(newUser),
-        token: token,
+        user: this.buildUserResponse(createdUser),
+        token,
       };
     } catch (error) {
-      // 6. Si algo falla, revertimos todos los cambios.
-      await queryRunner.rollbackTransaction();
       this.handleDBError(error);
-    } finally {
-      // 7. Liberamos el query runner.
-      await queryRunner.release();
     }
   }
 
   async login(loginUserDto: LoginUserDto) {
     const { clave, correoElectronico } = loginUserDto;
     const emailLower = correoElectronico.toLowerCase().trim();
-    const user = await this.userRepository.findOne({
-      where: { correoElectronico: emailLower },
-      select: {
-        usuarioId: true,
-        dni: true,
-        nombres: true,
-        apellidoPaterno: true,
-        apellidoMaterno: true,
-        celular: true,
-        correoElectronico: true,
-        estadoRegistro: true,
-        fechaCreacion: true,
-        fechaModificacion: true,
-        clave: true, // Necesario para la validación
-      },
-      relations: [
-        'perfilesLink',
-        'perfilesLink.perfil',
-        'perfilesLink.perfil.permisosLink',
-        'perfilesLink.perfil.permisosLink.permiso',
-      ],
+
+    const user = await this.prisma.usuario.findUnique({
+      where: { email: emailLower },
+      include: userAuthInclude,
     });
+
     if (!user) {
       throw new UnauthorizedException('Invalid credentials');
     }
 
-    const isPasswordValid = await bcrypt.compare(clave, user.clave);
+    const isPasswordValid = await bcrypt.compare(clave, user.password);
     if (!isPasswordValid) {
       throw new UnauthorizedException('Invalid credentials');
     }
+
     const token = this.getJwtToken({ usuarioId: user.usuarioId });
 
     return {
-      user: this._buildUserResponse(user),
-      token: token,
+      user: this.buildUserResponse(user),
+      token,
     };
   }
 
-  async checkAuthStatus(user: Usuario) {
-    // Cargar el usuario con todas las relaciones necesarias para los permisos
-    const userWithRelations = await this.userRepository.findOne({
+  async checkAuthStatus(user: AuthenticatedUser) {
+    const userWithRelations = await this.prisma.usuario.findUnique({
       where: { usuarioId: user.usuarioId },
-      relations: [
-        'perfilesLink',
-        'perfilesLink.perfil',
-        'perfilesLink.perfil.permisosLink',
-        'perfilesLink.perfil.permisosLink.permiso',
-      ],
+      include: userAuthInclude,
     });
 
     if (!userWithRelations) {
       throw new UnauthorizedException('Usuario no encontrado');
     }
 
-    const token = this.getJwtToken({ usuarioId: user.usuarioId });
+    const token = this.getJwtToken({ usuarioId: userWithRelations.usuarioId });
 
     return {
-      user: this._buildUserResponse(userWithRelations),
-      token: token,
+      user: this.buildUserResponse(userWithRelations),
+      token,
     };
   }
 
-  async findAllPerfiles(): Promise<Perfil[]> {
-    return this.perfilRepository.find({
-      relations: {
-        // Le decimos que dentro de 'permisosLink', también cargue 'permiso'
-        permisosLink: {
-          permiso: true,
-        },
+  async findAllPerfiles(query: PaginationQueryDto) {
+    const currentPage = query.page ?? 1;
+    const itemsPerPage = query.limit ?? 10;
+    const skip = (currentPage - 1) * itemsPerPage;
+
+    const [perfiles, totalItems] = await Promise.all([
+      this.prisma.perfil.findMany({
+        include: perfilWithPermisosInclude,
+        orderBy: { nombre: 'asc' },
+        skip,
+        take: itemsPerPage,
+      }),
+      this.prisma.perfil.count(),
+    ]);
+
+    return {
+      items: perfiles.map((perfil) => this.mapPerfilResponse(perfil)),
+      meta: {
+        pagination: buildPaginationMeta({
+          totalItems,
+          itemCount: perfiles.length,
+          itemsPerPage,
+          currentPage,
+        }),
       },
-      order: { nombre: 'ASC' },
-    });
+    };
   }
 
   async findUserById(id: number) {
-    const user = await this.userRepository.findOne({
+    const user = await this.prisma.usuario.findUnique({
       where: { usuarioId: id },
-      relations: [
-        'perfilesLink',
-        'perfilesLink.perfil',
-        'perfilesLink.perfil.permisosLink',
-        'perfilesLink.perfil.permisosLink.permiso',
-      ],
+      include: userAuthInclude,
     });
+
     if (!user) {
       throw new NotFoundException(`Usuario con ID "${id}" no encontrado.`);
     }
-    return this._buildUserResponse(user);
+
+    return this.buildUserResponse(user);
   }
 
-  async findAllUsers() {
-    const users = await this.userRepository.find({
-      relations: [
-        'perfilesLink',
-        'perfilesLink.perfil',
-        'perfilesLink.perfil.permisosLink',
-        'perfilesLink.perfil.permisosLink.permiso',
-      ],
-      order: {
-        nombres: 'ASC',
+  async findAllUsers(query: PaginationQueryDto) {
+    const currentPage = query.page ?? 1;
+    const itemsPerPage = query.limit ?? 10;
+    const skip = (currentPage - 1) * itemsPerPage;
+
+    const [users, totalItems] = await Promise.all([
+      this.prisma.usuario.findMany({
+        include: userAuthInclude,
+        orderBy: { nombre: 'asc' },
+        skip,
+        take: itemsPerPage,
+      }),
+      this.prisma.usuario.count(),
+    ]);
+
+    return {
+      items: users.map((user) => this.buildUserResponse(user)),
+      meta: {
+        pagination: buildPaginationMeta({
+          totalItems,
+          itemCount: users.length,
+          itemsPerPage,
+          currentPage,
+        }),
       },
-    });
-    return users.map((user) => this._buildUserResponse(user));
+    };
   }
 
   async updateUser(id: number, updateUserDto: UpdateUserDto) {
     const { perfilesIds, ...userDataToUpdate } = updateUserDto;
 
-    const queryRunner = this.dataSource.createQueryRunner();
-    await queryRunner.connect();
-    await queryRunner.startTransaction();
+    const user = await this.prisma.usuario.findUnique({
+      where: { usuarioId: id },
+      select: {
+        usuarioId: true,
+        apellido: true,
+      },
+    });
+
+    if (!user) {
+      throw new NotFoundException(`Usuario con ID "${id}" no encontrado.`);
+    }
+
+    if (perfilesIds && perfilesIds.length > 0) {
+      const perfiles = await this.prisma.perfil.findMany({
+        where: {
+          perfilId: { in: perfilesIds },
+        },
+        select: { perfilId: true },
+      });
+
+      if (perfiles.length !== perfilesIds.length) {
+        throw new BadRequestException(
+          'Uno o mas IDs de perfil no son validos.',
+        );
+      }
+    }
+
+    const userData = this.buildPrismaUserUpdateData(
+      {
+        apellido: user.apellido,
+      },
+      userDataToUpdate,
+    );
 
     try {
-      const user = await queryRunner.manager.findOneBy(Usuario, {
-        usuarioId: id,
-      });
-      if (!user) {
-        throw new NotFoundException(`Usuario con ID "${id}" no encontrado.`);
-      }
-
-      if (Object.keys(userDataToUpdate).length > 0) {
-        queryRunner.manager.merge(Usuario, user, userDataToUpdate);
-        await queryRunner.manager.save(user);
-      }
-
-      if (perfilesIds) {
-        const perfiles = await this.perfilRepository.findBy({
-          perfilId: In(perfilesIds),
-        });
-        if (perfiles.length !== perfilesIds.length) {
-          throw new BadRequestException(
-            'Uno o más IDs de perfil no son válidos.',
-          );
+      const updatedUser = await this.prisma.$transaction(async (tx) => {
+        if (this.hasPrismaUserUpdateData(userData)) {
+          await tx.usuario.update({
+            where: { usuarioId: id },
+            data: userData,
+          });
         }
 
-        await queryRunner.manager.delete(UsuarioPerfil, { usuarioId: id });
+        if (perfilesIds) {
+          await tx.usuarioPerfil.deleteMany({ where: { usuarioId: id } });
 
-        const newUserProfiles = perfiles.map((perfil) =>
-          this.usuarioPerfilRepository.create({
-            usuarioId: id,
-            perfilId: perfil.perfilId,
-          }),
-        );
-        await queryRunner.manager.save(newUserProfiles);
-      }
+          await tx.usuarioPerfil.createMany({
+            data: perfilesIds.map((perfilId) => ({
+              usuarioId: id,
+              perfilId,
+            })),
+          });
+        }
 
-      await queryRunner.commitTransaction();
-
-      const updatedUserWithRelations = await this.userRepository.findOne({
-        where: { usuarioId: id },
-        relations: ['perfilesLink', 'perfilesLink.perfil'],
+        return tx.usuario.findUnique({
+          where: { usuarioId: id },
+          include: userAuthInclude,
+        });
       });
 
-      if (!updatedUserWithRelations) {
+      if (!updatedUser) {
         throw new InternalServerErrorException(
-          'No se pudo encontrar el usuario después de la actualización.',
+          'No se pudo encontrar el usuario despues de la actualizacion.',
         );
       }
 
-      return this._buildUserResponse(updatedUserWithRelations);
+      return this.buildUserResponse(updatedUser);
     } catch (error) {
-      await queryRunner.rollbackTransaction();
       this.handleDBError(error);
-    } finally {
-      await queryRunner.release();
     }
   }
 
   async changeStatus(userId: number, changeStatusDto: ChangeStatusDto) {
     const { estadoRegistro } = changeStatusDto;
-    const result = await this.userRepository.update(userId, {
-      estadoRegistro,
-    });
-    if (result.affected === 0) {
-      throw new NotFoundException(`Usuario con ID "${userId}" no encontrado.`);
+
+    try {
+      await this.prisma.usuario.update({
+        where: { usuarioId: userId },
+        data: { estadoRegistro },
+      });
+    } catch (error) {
+      this.handleDBError(error);
     }
+
     return { message: `Estado del usuario actualizado a ${estadoRegistro}.` };
   }
 
-  // --- FUNCIÓN OPTIMIZADA Y CON ORDENAMIENTO ---
-  async getMenuForUser(user: Usuario): Promise<any[]> {
-    // Método alternativo: Usar find con relaciones en lugar de QueryBuilder
-    const userWithMenus = await this.userRepository.findOne({
+  async getMenuForUser(user: AuthenticatedUser) {
+    const userWithMenus = await this.prisma.usuario.findUnique({
       where: { usuarioId: user.usuarioId },
-      relations: [
-        'perfilesLink',
-        'perfilesLink.perfil',
-        'perfilesLink.perfil.permisosLink',
-        'perfilesLink.perfil.permisosLink.permiso',
-      ],
+      include: userAuthInclude,
     });
 
-    if (!userWithMenus || !userWithMenus.perfilesLink?.length) {
+    if (!userWithMenus || userWithMenus.perfiles.length === 0) {
       return [];
     }
 
-    // Extraer permisos de todos los perfiles del usuario
-    const menuOptions: any[] = [];
-    userWithMenus.perfilesLink.forEach((userProfile) => {
-      if (userProfile.perfil && userProfile.perfil.permisosLink) {
-        userProfile.perfil.permisosLink.forEach((menuProfile) => {
-          if (menuProfile.permiso && menuProfile.permiso.estadoRegistro) {
-            menuOptions.push({
-              id: menuProfile.permiso.permisoId,
-              nombre: menuProfile.permiso.nombre,
-              urlMenu: menuProfile.permiso.urlMenu,
-              descripcion: menuProfile.permiso.descripcion,
-              estadoRegistro: menuProfile.permiso.estadoRegistro,
-              idPadre: menuProfile.permiso.permisoPadreId,
-              orden: menuProfile.orden,
-            });
-          }
-        });
+    const menuOptions: Array<{
+      id: number;
+      nombre: string;
+      urlMenu: string | null;
+      descripcion: string | null;
+      estadoRegistro: boolean;
+      idPadre: number | null;
+      orden: number;
+    }> = [];
+
+    for (const perfilLink of userWithMenus.perfiles) {
+      for (const permisoLink of perfilLink.perfil.permisos) {
+        if (
+          permisoLink.permiso.estadoRegistro &&
+          permisoLink.permiso.tipo === 'MENU'
+        ) {
+          menuOptions.push({
+            id: permisoLink.permiso.permisoId,
+            nombre: permisoLink.permiso.nombre,
+            urlMenu: permisoLink.permiso.ruta,
+            descripcion: permisoLink.permiso.descripcion,
+            estadoRegistro: permisoLink.permiso.estadoRegistro,
+            idPadre: permisoLink.permiso.permisoPadreId,
+            orden: permisoLink.orden,
+          });
+        }
       }
-    });
+    }
 
     if (menuOptions.length === 0) {
       return [];
     }
 
-    // Eliminar duplicados y ordenar
-    const menuOptionsMap = new Map<string, any>();
+    const menuOptionsMap = new Map<number, (typeof menuOptions)[number]>();
     for (const item of menuOptions) {
       const existingItem = menuOptionsMap.get(item.id);
       if (!existingItem || item.orden < existingItem.orden) {
         menuOptionsMap.set(item.id, item);
       }
     }
+
     const allOptions = Array.from(menuOptionsMap.values());
     allOptions.sort((a, b) => a.orden - b.orden);
 
     return this.buildMenuHierarchy(allOptions);
   }
 
+  async findAllPermisos(query: PaginationQueryDto) {
+    const currentPage = query.page ?? 1;
+    const itemsPerPage = query.limit ?? 10;
+    const skip = (currentPage - 1) * itemsPerPage;
+
+    const where: Prisma.PermisoWhereInput = { estadoRegistro: true };
+
+    const [items, totalItems] = await Promise.all([
+      this.prisma.permiso.findMany({
+        where,
+        orderBy: { nombre: 'asc' },
+        select: {
+          permisoId: true,
+          nombre: true,
+          descripcion: true,
+        },
+        skip,
+        take: itemsPerPage,
+      }),
+      this.prisma.permiso.count({ where }),
+    ]);
+
+    return {
+      items,
+      meta: {
+        pagination: buildPaginationMeta({
+          totalItems,
+          itemCount: items.length,
+          itemsPerPage,
+          currentPage,
+        }),
+      },
+    };
+  }
+
+  async createPerfil(createPerfilDto: CreatePerfilDto) {
+    const { nombre, descripcion, permisos } = createPerfilDto;
+
+    if (permisos.length > 0) {
+      const permisosIds = permisos.map((opt) => opt.permisoId);
+      const permisosExistentes = await this.prisma.permiso.findMany({
+        where: {
+          permisoId: { in: permisosIds },
+        },
+        select: { permisoId: true },
+      });
+
+      if (permisosExistentes.length !== permisosIds.length) {
+        throw new BadRequestException(
+          'Uno o mas IDs de permisos no son validos.',
+        );
+      }
+    }
+
+    try {
+      const perfil = await this.prisma.$transaction(async (tx) => {
+        const createdPerfil = await tx.perfil.create({
+          data: { nombre, descripcion },
+        });
+
+        if (permisos.length > 0) {
+          await tx.permisoPerfil.createMany({
+            data: permisos.map((opt) => ({
+              perfilId: createdPerfil.perfilId,
+              permisoId: opt.permisoId,
+              orden: opt.orden,
+            })),
+          });
+        }
+
+        return tx.perfil.findUnique({
+          where: { perfilId: createdPerfil.perfilId },
+          include: perfilWithPermisosInclude,
+        });
+      });
+
+      if (!perfil) {
+        throw new InternalServerErrorException(
+          'No se pudo recuperar el perfil recien creado.',
+        );
+      }
+
+      return this.mapPerfilResponse(perfil);
+    } catch (error) {
+      this.handleDBError(error);
+    }
+  }
+
+  async findOnePerfil(id: number) {
+    const perfil = await this.prisma.perfil.findUnique({
+      where: { perfilId: id },
+      include: perfilWithPermisosInclude,
+    });
+
+    if (!perfil) {
+      throw new NotFoundException(`Perfil con ID "${id}" no encontrado.`);
+    }
+
+    return this.mapPerfilResponse(perfil);
+  }
+
+  async updatePerfil(id: number, updatePerfilDto: UpdatePerfilDto) {
+    const perfil = await this.prisma.perfil.findUnique({
+      where: { perfilId: id },
+      select: { perfilId: true },
+    });
+
+    if (!perfil) {
+      throw new NotFoundException(`Perfil con ID "${id}" no encontrado.`);
+    }
+
+    if (updatePerfilDto.permisos) {
+      const permisosIds = updatePerfilDto.permisos.map((opt) => opt.permisoId);
+
+      if (permisosIds.length > 0) {
+        const permisosExistentes = await this.prisma.permiso.findMany({
+          where: {
+            permisoId: { in: permisosIds },
+          },
+          select: { permisoId: true },
+        });
+
+        if (permisosExistentes.length !== permisosIds.length) {
+          throw new BadRequestException(
+            'Uno o mas IDs de permisos no son validos.',
+          );
+        }
+      }
+    }
+
+    const { permisos, ...perfilData } = updatePerfilDto;
+
+    try {
+      const updatedPerfil = await this.prisma.$transaction(async (tx) => {
+        if (Object.keys(perfilData).length > 0) {
+          await tx.perfil.update({
+            where: { perfilId: id },
+            data: perfilData,
+          });
+        }
+
+        if (permisos) {
+          await tx.permisoPerfil.deleteMany({ where: { perfilId: id } });
+
+          if (permisos.length > 0) {
+            await tx.permisoPerfil.createMany({
+              data: permisos.map((opt) => ({
+                perfilId: id,
+                permisoId: opt.permisoId,
+                orden: opt.orden,
+              })),
+            });
+          }
+        }
+
+        return tx.perfil.findUnique({
+          where: { perfilId: id },
+          include: perfilWithPermisosInclude,
+        });
+      });
+
+      if (!updatedPerfil) {
+        throw new InternalServerErrorException(
+          'No se pudo encontrar el perfil despues de la actualizacion.',
+        );
+      }
+
+      return this.mapPerfilResponse(updatedPerfil);
+    } catch (error) {
+      this.handleDBError(error);
+    }
+  }
+
+  async changeStatusPerfil(id: number, changeStatusDto: ChangeStatusDto) {
+    const { estadoRegistro } = changeStatusDto;
+
+    try {
+      await this.prisma.perfil.update({
+        where: { perfilId: id },
+        data: { estadoRegistro },
+      });
+    } catch (error) {
+      this.handleDBError(error);
+    }
+
+    return { message: 'Estado del perfil actualizado correctamente.' };
+  }
+
   private buildMenuHierarchy(
-    options: any[], // Cambiado de Permiso[] a any[]
+    options: Array<{
+      id: number;
+      idPadre: number | null;
+      orden: number;
+      [key: string]: unknown;
+    }>,
     parentId: number | null = null,
     visited = new Set<number>(),
-  ): any[] {
-    const hierarchy: any[] = [];
-
-    // La lógica de ordenamiento ya se aplicó, así que aquí solo filtramos.
+  ): Array<Record<string, unknown>> {
+    const hierarchy: Array<Record<string, unknown>> = [];
     const children = options.filter((opt) => opt.idPadre === parentId);
 
     for (const child of children) {
       if (visited.has(child.id)) {
-        console.error(
-          `Error: Se detectó una dependencia circular en el menú con el ID: ${child.id}`,
-        );
         continue;
       }
+
       visited.add(child.id);
       const node = {
         ...child,
@@ -380,189 +597,169 @@ export class AuthService {
     return hierarchy;
   }
 
-  private _buildUserResponse(user: Usuario) {
-    const perfiles =
-      user.perfilesLink?.map((link) => link.perfil?.nombre) || [];
+  private buildUserResponse(
+    user: Prisma.UsuarioGetPayload<{ include: typeof userAuthInclude }>,
+  ) {
+    const apellidos = this.splitApellidos(user.apellido);
 
-    // Extraer todos los permisos únicos del usuario
+    const perfiles = user.perfiles
+      .map((link) => link.perfil?.nombre)
+      .filter((perfil): perfil is string => Boolean(perfil));
+
     const permisosSet = new Set<string>();
-    user.perfilesLink?.forEach((userProfile) => {
-      if (userProfile.perfil && userProfile.perfil.permisosLink) {
-        userProfile.perfil.permisosLink.forEach((permisoLink) => {
-          if (
-            permisoLink.permiso &&
-            permisoLink.permiso.estadoRegistro &&
-            permisoLink.permiso.keyPermiso
-          ) {
-            permisosSet.add(permisoLink.permiso.keyPermiso);
-          }
-        });
+    for (const userProfile of user.perfiles) {
+      for (const permisoLink of userProfile.perfil.permisos) {
+        if (
+          permisoLink.permiso.estadoRegistro &&
+          permisoLink.permiso.tipo === 'ACCION'
+        ) {
+          permisosSet.add(this.toPermissionKey(permisoLink.permiso.nombre));
+        }
       }
-    });
+    }
 
     return {
       usuarioId: user.usuarioId,
       dni: user.dni,
-      nombres: user.nombres,
-      apellidoPaterno: user.apellidoPaterno,
-      apellidoMaterno: user.apellidoMaterno,
-      celular: user.celular,
-      correoElectronico: user.correoElectronico,
+      nombres: user.nombre,
+      apellidoPaterno: apellidos.apellidoPaterno,
+      apellidoMaterno: apellidos.apellidoMaterno,
+      celular: null,
+      correoElectronico: user.email,
       estadoRegistro: user.estadoRegistro,
       fechaCreacion: user.fechaCreacion,
-      fechaModificacion: user.fechaModificacion,
-      perfiles: perfiles,
-      permisos: Array.from(permisosSet), // Array de keyPermisos únicos
+      fechaModificacion: user.fechaActualizacion,
+      perfiles,
+      permisos: Array.from(permisosSet),
     };
   }
 
+  private mapPerfilResponse(
+    perfil: Prisma.PerfilGetPayload<{
+      include: typeof perfilWithPermisosInclude;
+    }>,
+  ) {
+    return {
+      perfilId: perfil.perfilId,
+      nombre: perfil.nombre,
+      descripcion: perfil.descripcion,
+      estadoRegistro: perfil.estadoRegistro,
+      fechaCreacion: perfil.fechaCreacion,
+      fechaModificacion: perfil.fechaActualizacion,
+      permisosLink: perfil.permisos.map((permisoLink) => ({
+        permisoId: permisoLink.permisoId,
+        orden: permisoLink.orden,
+        permiso: {
+          permisoId: permisoLink.permiso.permisoId,
+          nombre: permisoLink.permiso.nombre,
+          descripcion: permisoLink.permiso.descripcion,
+        },
+      })),
+    };
+  }
+
+  private splitApellidos(apellidoCompleto: string) {
+    const normalized = apellidoCompleto.trim();
+    if (!normalized) {
+      return {
+        apellidoPaterno: '',
+        apellidoMaterno: null as string | null,
+      };
+    }
+
+    const parts = normalized.split(/\s+/);
+    const apellidoPaterno = parts[0] ?? '';
+    const apellidoMaterno = parts.slice(1).join(' ') || null;
+
+    return { apellidoPaterno, apellidoMaterno };
+  }
+
+  private joinApellidos(
+    apellidoPaterno: string,
+    apellidoMaterno?: string | null,
+  ) {
+    const values = [apellidoPaterno?.trim(), apellidoMaterno?.trim()].filter(
+      (value): value is string => Boolean(value),
+    );
+
+    return values.join(' ');
+  }
+
+  private buildPrismaUserUpdateData(
+    currentUser: {
+      apellido: string;
+    },
+    userDataToUpdate: Omit<UpdateUserDto, 'perfilesIds'>,
+  ): Prisma.UsuarioUpdateInput {
+    const currentApellidos = this.splitApellidos(currentUser.apellido);
+    const apellidoPaterno =
+      userDataToUpdate.apellidoPaterno ?? currentApellidos.apellidoPaterno;
+    const apellidoMaterno =
+      userDataToUpdate.apellidoMaterno ?? currentApellidos.apellidoMaterno;
+
+    return {
+      dni: userDataToUpdate.dni,
+      nombre: userDataToUpdate.nombres,
+      apellido:
+        userDataToUpdate.apellidoPaterno !== undefined ||
+        userDataToUpdate.apellidoMaterno !== undefined
+          ? this.joinApellidos(apellidoPaterno, apellidoMaterno)
+          : undefined,
+      email: userDataToUpdate.correoElectronico
+        ? userDataToUpdate.correoElectronico.toLowerCase().trim()
+        : undefined,
+    };
+  }
+
+  private hasPrismaUserUpdateData(data: Prisma.UsuarioUpdateInput): boolean {
+    return (
+      data.dni !== undefined ||
+      data.nombre !== undefined ||
+      data.apellido !== undefined ||
+      data.email !== undefined
+    );
+  }
+
   private getJwtToken(payload: JwtPayLoad) {
-    const token = this.jwtService.sign(payload);
-    return token;
+    return this.jwtService.sign(payload);
   }
 
-  async findAllPermisos(): Promise<Permiso[]> {
-    return this.permisoRepository.find({
-      where: { estadoRegistro: true }, // Opcional: solo traer los permisos activos
-      order: { nombre: 'ASC' },
-    });
+  private toPermissionKey(value: string): string {
+    return value
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .replace(/[^a-zA-Z0-9]+/g, '_')
+      .replace(/^_+|_+$/g, '')
+      .toUpperCase();
   }
 
-  /* Perfiles */
-  async createPerfil(createPerfilDto: CreatePerfilDto): Promise<Perfil> {
-    const { nombre, descripcion, permisos } = createPerfilDto;
-    const queryRunner = this.dataSource.createQueryRunner();
-    await queryRunner.connect();
-    await queryRunner.startTransaction();
-
-    try {
-      const perfil = this.perfilRepository.create({ nombre, descripcion });
-      await queryRunner.manager.save(perfil);
-
-      if (permisos && permisos.length > 0) {
-        const permisosIds = permisos.map((opt) => opt.permisoId);
-        const permisosExistentes = await this.permisoRepository.findBy({
-          permisoId: In(permisosIds),
-        });
-
-        if (permisosExistentes.length !== permisosIds.length) {
-          throw new BadRequestException(
-            'Uno o más IDs de permisos no son válidos.',
-          );
-        }
-
-        const enlaces = permisos.map((opt) =>
-          this.permisoPerfilRepository.create({
-            perfilId: perfil.perfilId,
-            permisoId: opt.permisoId,
-            orden: opt.orden,
-          }),
-        );
-        await queryRunner.manager.save(enlaces);
-      }
-
-      await queryRunner.commitTransaction();
-      return this.findOnePerfil(perfil.perfilId);
-    } catch (error) {
-      await queryRunner.rollbackTransaction();
-      this.handleDBError(error);
-    } finally {
-      await queryRunner.release();
-    }
-  }
-
-  async findOnePerfil(id: number): Promise<Perfil> {
-    const perfil = await this.perfilRepository.findOne({
-      where: { perfilId: id },
-      relations: ['permisosLink', 'permisosLink.permiso'],
-    });
-    if (!perfil) {
-      throw new NotFoundException(`Perfil con ID "${id}" no encontrado.`);
-    }
-    return perfil;
-  }
-
-  // El método findAllPerfiles() ya lo tienes, así que está perfecto.
-
-  async updatePerfil(
-    id: number,
-    updatePerfilDto: UpdatePerfilDto,
-  ): Promise<Perfil> {
-    const { nombre, descripcion, permisos } = updatePerfilDto;
-    const queryRunner = this.dataSource.createQueryRunner();
-    await queryRunner.connect();
-    await queryRunner.startTransaction();
-
-    try {
-      const perfil = await queryRunner.manager.findOneBy(Perfil, {
-        perfilId: id,
-      });
-      if (!perfil) {
-        throw new NotFoundException(`Perfil con ID "${id}" no encontrado.`);
-      }
-
-      queryRunner.manager.merge(Perfil, perfil, { nombre, descripcion });
-      await queryRunner.manager.save(perfil);
-
-      if (permisos) {
-        await queryRunner.manager.delete(PermisoPerfil, { perfilId: id });
-
-        if (permisos.length > 0) {
-          const permisosIds = permisos.map((opt) => opt.permisoId);
-          const permisosExistentes = await this.permisoRepository.findBy({
-            permisoId: In(permisosIds),
-          });
-          if (permisosExistentes.length !== permisosIds.length) {
-            throw new BadRequestException(
-              'Uno o más IDs de permisos no son válidos.',
-            );
-          }
-
-          const nuevosEnlaces = permisos.map((opt) =>
-            this.permisoPerfilRepository.create({
-              perfilId: id,
-              permisoId: opt.permisoId,
-              orden: opt.orden,
-            }),
-          );
-          await queryRunner.manager.save(nuevosEnlaces);
-        }
-      }
-
-      await queryRunner.commitTransaction();
-      return this.findOnePerfil(id);
-    } catch (error) {
-      await queryRunner.rollbackTransaction();
-      this.handleDBError(error);
-    } finally {
-      await queryRunner.release();
-    }
-  }
-
-  async changeStatusPerfil(
-    id: number,
-    changeStatusDto: ChangeStatusDto,
-  ): Promise<{ message: string }> {
-    const { estadoRegistro } = changeStatusDto;
-    const result = await this.perfilRepository.update(id, { estadoRegistro });
-
-    if (result.affected === 0) {
-      throw new NotFoundException(`Perfil con ID "${id}" no encontrado.`);
-    }
-    return { message: `Estado del perfil actualizado correctamente.` };
-  }
-
-  private handleDBError(error: any): never {
-    if (error instanceof HttpException) {
+  private handleDBError(error: unknown): never {
+    if (
+      error instanceof NotFoundException ||
+      error instanceof BadRequestException ||
+      error instanceof ConflictException
+    ) {
       throw error;
     }
-    if (error.code === '23505') {
-      throw new BadRequestException(error.detail);
-    } else if (error.code === '23503') {
-      // Error de llave foránea (foreign key constraint)
-      throw new BadRequestException(error.detail);
-    } else {
-      throw new InternalServerErrorException('Database error');
+
+    if (error instanceof Prisma.PrismaClientKnownRequestError) {
+      if (error.code === 'P2025') {
+        throw new NotFoundException('Registro no encontrado.');
+      }
+
+      if (error.code === 'P2002') {
+        throw new ConflictException(
+          'Ya existe un registro con datos unicos duplicados.',
+        );
+      }
+
+      if (error.code === 'P2003') {
+        throw new BadRequestException(
+          'Error de llave foranea en la base de datos.',
+        );
+      }
     }
+
+    throw new InternalServerErrorException('Database error');
   }
 }

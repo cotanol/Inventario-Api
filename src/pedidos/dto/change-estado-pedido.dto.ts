@@ -1,5 +1,5 @@
 import { IsEnum } from 'class-validator';
-import { EstadoPedido } from '../entities/pedido.entity';
+import { EstadoPedido } from 'generated/prisma/client';
 
 export class ChangeEstadoPedidoDto {
   @IsEnum(EstadoPedido, {

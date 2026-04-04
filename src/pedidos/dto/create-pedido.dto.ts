@@ -8,7 +8,7 @@ import {
   IsPositive,
 } from 'class-validator';
 import { Type } from 'class-transformer';
-import { TipoPago } from '../entities/pedido.entity';
+import { TipoPago } from 'generated/prisma/client';
 
 // DTO para cada detalle del pedido
 export class CreateDetallePedidoDto {

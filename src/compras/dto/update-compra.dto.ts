@@ -10,7 +10,7 @@ import {
   IsOptional,
 } from 'class-validator';
 import { Type } from 'class-transformer';
-import { EstadoCompra } from '../entities/compra.entity';
+import { EstadoCompra } from 'generated/prisma/client';
 
 export class UpdateCompraDto extends PartialType(CreateCompraDto) {}
 

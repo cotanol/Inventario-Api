@@ -1,8 +1,8 @@
 import { IsEnum, IsInt, IsNumber, IsPositive, Min } from 'class-validator';
 import {
-  TipoMovimientoInventario,
   OrigenMovimiento,
-} from '../entities/movimiento-inventario.entity';
+  TipoMovimientoInventario,
+} from 'generated/prisma/client';
 
 export class CreateMovimientoInventarioDto {
   @IsInt()

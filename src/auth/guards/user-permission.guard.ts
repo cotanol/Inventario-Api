@@ -6,8 +6,9 @@ import {
   ForbiddenException,
   Injectable,
 } from '@nestjs/common';
+import { Request } from 'express';
 import { Observable } from 'rxjs';
-import { Usuario } from '../entities/usuario.entity';
+import { AuthenticatedUser } from '../interfaces/authenticated-user.interface';
 import { META_PERMISSIONS } from '../decorators/permission-protected.decorator';
 
 @Injectable()
@@ -26,20 +27,19 @@ export class UserPermissionGuard implements CanActivate {
     if (!validPermissions) return true;
     if (validPermissions.length === 0) return true;
 
-    const req = context.switchToHttp().getRequest();
-    const user = req.user as Usuario;
+    const req = context
+      .switchToHttp()
+      .getRequest<Request & { user?: AuthenticatedUser }>();
+    const user = req.user;
 
     if (!user) throw new BadRequestException('User not found');
 
     // Extraer todos los permisos únicos del usuario desde sus perfiles
     const userPermissions = new Set<string>();
     user.perfilesLink?.forEach((userProfile) => {
-      userProfile.perfil?.permisosLink?.forEach((permisoLink) => {
-        if (
-          permisoLink.permiso?.estadoRegistro &&
-          permisoLink.permiso?.keyPermiso
-        ) {
-          userPermissions.add(permisoLink.permiso.keyPermiso);
+      userProfile.permisosLink?.forEach((permisoLink) => {
+        if (permisoLink.estadoRegistro && permisoLink.nombre) {
+          userPermissions.add(this.toPermissionKey(permisoLink.nombre));
         }
       });
     });
@@ -50,7 +50,16 @@ export class UserPermissionGuard implements CanActivate {
     }
 
     throw new ForbiddenException(
-      `User ${user.nombres + ' ' + user.apellidoPaterno} needs one of these permissions: [${validPermissions}]`,
+      `User ${user.nombres + ' ' + user.apellidoPaterno} needs one of these permissions: [${validPermissions.join(', ')}]`,
     );
+  }
+
+  private toPermissionKey(value: string): string {
+    return value
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .replace(/[^a-zA-Z0-9]+/g, '_')
+      .replace(/^_+|_+$/g, '')
+      .toUpperCase();
   }
 }

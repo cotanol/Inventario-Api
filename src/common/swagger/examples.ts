@@ -1,0 +1,167 @@
+export const swaggerExamples = {
+  linea: {
+    lineaId: 1,
+    nombre: 'Ferreteria',
+    estadoRegistro: true,
+  },
+  grupo: {
+    grupoId: 4,
+    nombre: 'Herramientas',
+    estadoRegistro: true,
+    linea: {
+      lineaId: 1,
+      nombre: 'Ferreteria',
+    },
+  },
+  marca: {
+    marcaId: 2,
+    nombre: 'Bosch',
+    estadoRegistro: true,
+  },
+  cliente: {
+    clienteId: 12,
+    ruc: '20123456789',
+    nombre: 'Cliente Demo SAC',
+    correoElectronico: 'compras@clientedemo.pe',
+    celular: '999999999',
+    direccion: 'Av. Lima 123',
+    estadoRegistro: true,
+    vendedor: {
+      vendedorId: 3,
+      nombre: 'Luis',
+      apellidoPaterno: 'Rojas',
+    },
+  },
+  producto: {
+    productoId: 21,
+    codigo: 'SLO-00021',
+    nombre: 'Taladro Industrial',
+    precioVenta: 350.5,
+    costoReferencial: 280,
+    estadoRegistro: true,
+    grupo: {
+      grupoId: 4,
+      nombre: 'Herramientas',
+      linea: {
+        lineaId: 1,
+        nombre: 'Ferreteria',
+      },
+    },
+    marca: {
+      marcaId: 2,
+      nombre: 'Bosch',
+    },
+    inventario: {
+      inventarioId: 21,
+      cantidadActual: 45,
+      cantidadMinima: 10,
+    },
+  },
+  pedido: {
+    pedidoId: 100,
+    clienteId: 12,
+    vendedorId: 3,
+    tipoPago: 'CONTADO',
+    totalNeto: 701,
+    totalFinal: 701,
+    estadoPedido: 'PENDIENTE',
+    detalles: [
+      {
+        detalleId: 1,
+        productoId: 21,
+        cantidad: 2,
+        precioUnitario: 350.5,
+        subtotalLinea: 701,
+      },
+    ],
+  },
+  compra: {
+    compraId: 58,
+    proveedorId: 4,
+    estadoCompra: 'ORDENADO',
+    totalCompra: 1200,
+    fechaOrden: '2026-04-03T10:00:00.000Z',
+    detalles: [
+      {
+        detalleCompraId: 1,
+        productoId: 21,
+        cantidadSolicitada: 10,
+        cantidadRecibida: 0,
+        costoUnitario: 120,
+        subtotal: 1200,
+      },
+    ],
+  },
+  proveedor: {
+    proveedorId: 4,
+    ruc: '20555555555',
+    razonSocial: 'Proveedor Demo SAC',
+    correoElectronico: 'ventas@proveedor.pe',
+    celular: '988888888',
+    estadoRegistro: true,
+  },
+  vendedor: {
+    vendedorId: 3,
+    dni: '12345678',
+    nombre: 'Luis',
+    apellidoPaterno: 'Rojas',
+    apellidoMaterno: 'Vega',
+    correoElectronico: 'luis@empresa.pe',
+    estadoRegistro: true,
+  },
+  authUser: {
+    usuarioId: 1,
+    dni: '12345678',
+    nombres: 'Administrador',
+    apellidoPaterno: 'General',
+    apellidoMaterno: null,
+    correoElectronico: 'admin@inventario.pe',
+    perfiles: ['ADMINISTRADOR'],
+    permisos: ['VER_USUARIOS', 'CREAR_USUARIO'],
+  },
+  authSession: {
+    user: {
+      usuarioId: 1,
+      nombres: 'Administrador',
+      correoElectronico: 'admin@inventario.pe',
+      perfiles: ['ADMINISTRADOR'],
+    },
+    token: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...',
+  },
+  perfil: {
+    perfilId: 2,
+    nombre: 'VENTAS',
+    descripcion: 'Perfil para operaciones de ventas',
+    estadoRegistro: true,
+    permisosLink: [
+      {
+        permisoId: 11,
+        orden: 1,
+        permiso: {
+          permisoId: 11,
+          nombre: 'VER_PEDIDOS',
+          descripcion: 'Visualizar pedidos',
+        },
+      },
+    ],
+  },
+  permiso: {
+    permisoId: 11,
+    nombre: 'VER_PEDIDOS',
+    descripcion: 'Visualizar pedidos',
+  },
+  menu: [
+    {
+      id: 1,
+      nombre: 'Dashboard',
+      urlMenu: '/dashboard',
+      descripcion: 'Panel principal',
+      idPadre: null,
+      orden: 1,
+      hijos: [],
+    },
+  ],
+  statusMessage: {
+    message: 'Operacion realizada correctamente.',
+  },
+} as const;

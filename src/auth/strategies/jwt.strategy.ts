@@ -1,16 +1,16 @@
-import { PassportStrategy } from '@nestjs/passport';
-import { Usuario } from '../entities/usuario.entity';
-import { ExtractJwt, Strategy } from 'passport-jwt';
-import { JwtPayLoad } from '../interfaces/jwt-payload.interface';
-import { UnauthorizedException } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { Injectable, UnauthorizedException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import { PassportStrategy } from '@nestjs/passport';
+import { ExtractJwt, Strategy } from 'passport-jwt';
 
+import { PrismaService } from 'src/prisma/prisma.service';
+
+import { JwtPayLoad } from '../interfaces/jwt-payload.interface';
+
+@Injectable()
 export class JwtStrategy extends PassportStrategy(Strategy) {
   constructor(
-    @InjectRepository(Usuario)
-    private readonly userRepository: Repository<Usuario>,
+    private readonly prisma: PrismaService,
     configService: ConfigService,
   ) {
     super({
@@ -18,23 +18,65 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
       jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),
     });
   }
-  async validate(payload: JwtPayLoad): Promise<Usuario> {
+
+  async validate(payload: JwtPayLoad) {
     const { usuarioId } = payload;
 
-    const user = await this.userRepository.findOne({
+    const user = await this.prisma.usuario.findUnique({
       where: { usuarioId },
-      relations: [
-        'perfilesLink',
-        'perfilesLink.perfil',
-        'perfilesLink.perfil.permisosLink',
-        'perfilesLink.perfil.permisosLink.permiso',
-      ],
+      include: {
+        perfiles: {
+          include: {
+            perfil: {
+              include: {
+                permisos: {
+                  include: {
+                    permiso: true,
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
     });
 
-    if (!user) throw new UnauthorizedException('Token not valid');
+    if (!user) {
+      throw new UnauthorizedException('Token not valid');
+    }
 
-    if (!user.estadoRegistro) throw new UnauthorizedException('User inactive');
+    if (!user.estadoRegistro) {
+      throw new UnauthorizedException('User inactive');
+    }
 
-    return user;
+    return {
+      usuarioId: user.usuarioId,
+      dni: user.dni,
+      nombres: user.nombre,
+      apellidoPaterno: user.apellido,
+      apellidoMaterno: null,
+      celular: null,
+      correoElectronico: user.email,
+      estadoRegistro: user.estadoRegistro,
+      fechaCreacion: user.fechaCreacion,
+      fechaModificacion: user.fechaActualizacion,
+      perfilesLink: user.perfiles.map((perfilLink) => ({
+        perfilId: perfilLink.perfil.perfilId,
+        nombre: perfilLink.perfil.nombre,
+        descripcion: perfilLink.perfil.descripcion,
+        estadoRegistro: perfilLink.perfil.estadoRegistro,
+        permisosLink: perfilLink.perfil.permisos.map((permisoLink) => ({
+          permisoId: permisoLink.permiso.permisoId,
+          nombre: permisoLink.permiso.nombre,
+          descripcion: permisoLink.permiso.descripcion,
+          tipoPermiso: permisoLink.permiso.tipo,
+          urlMenu: permisoLink.permiso.ruta,
+          icono: permisoLink.permiso.icono,
+          idPadre: permisoLink.permiso.permisoPadreId,
+          estadoRegistro: permisoLink.permiso.estadoRegistro,
+          orden: permisoLink.orden,
+        })),
+      })),
+    };
   }
 }

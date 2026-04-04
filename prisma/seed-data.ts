@@ -1,5 +1,5 @@
-import { TipoPermiso } from 'src/auth/entities/permiso.entity';
-import { ValidPermissions } from 'src/auth/interfaces/valid-permissions.interface';
+import { TipoPermiso } from '../generated/prisma/client';
+import { ValidPermissions } from '../src/auth/interfaces/valid-permissions.interface';
 
 interface SeedUsuario {
   usuarioId: number;

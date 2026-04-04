@@ -1,84 +1,378 @@
 import {
-  Injectable,
-  NotFoundException,
   BadRequestException,
-  ConflictException,
+  Injectable,
+  InternalServerErrorException,
+  NotFoundException,
 } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, DataSource } from 'typeorm';
-import { Pedido, DetallePedido } from './entities';
-import { EstadoPedido } from './entities/pedido.entity';
-import { CreatePedidoDto, ChangeEstadoPedidoDto, UpdatePedidoDto } from './dto';
-import { Cliente } from 'src/clientes/entities/cliente.entity';
-import { Vendedor } from 'src/vendedores/entities/vendedor.entity';
-import { Producto } from 'src/catalogo/entities/producto.entity';
-import { Inventario } from 'src/inventario/entities/inventario.entity';
-import {
-  MovimientoInventario,
-  TipoMovimientoInventario,
-  OrigenMovimiento,
-} from 'src/inventario/entities/movimiento-inventario.entity';
+import { Prisma } from 'generated/prisma/client';
+
+import { PrismaService } from 'src/prisma/prisma.service';
 import { ReportsService } from 'src/reports/reports.service';
+import { PaginationQueryDto } from 'src/common/dto/pagination-query.dto';
+import { buildPaginationMeta } from 'src/common/utils/pagination.util';
+
+import { ChangeEstadoPedidoDto, CreatePedidoDto, UpdatePedidoDto } from './dto';
+
+const PEDIDO_INCLUDE = {
+  cliente: true,
+  vendedor: true,
+  detalles: {
+    include: {
+      producto: true,
+    },
+  },
+} satisfies Prisma.PedidoInclude;
 
 @Injectable()
 export class PedidosService {
   constructor(
-    @InjectRepository(Pedido)
-    private readonly pedidoRepository: Repository<Pedido>,
-    @InjectRepository(DetallePedido)
-    private readonly detallePedidoRepository: Repository<DetallePedido>,
-    @InjectRepository(Cliente)
-    private readonly clienteRepository: Repository<Cliente>,
-    @InjectRepository(Vendedor)
-    private readonly vendedorRepository: Repository<Vendedor>,
-    @InjectRepository(Producto)
-    private readonly productoRepository: Repository<Producto>,
-    @InjectRepository(Inventario)
-    private readonly inventarioRepository: Repository<Inventario>,
-    @InjectRepository(MovimientoInventario)
-    private readonly movimientoInventarioRepository: Repository<MovimientoInventario>,
-    private readonly dataSource: DataSource,
+    private readonly prisma: PrismaService,
     private readonly reportsService: ReportsService,
   ) {}
 
-  /**
-   * Crea un nuevo pedido en estado PENDIENTE
-   * No afecta el inventario hasta que se complete
-   */
-  async create(createPedidoDto: CreatePedidoDto): Promise<Pedido> {
-    // Validar que el cliente existe
-    const cliente = await this.clienteRepository.findOne({
-      where: { clienteId: createPedidoDto.clienteId },
+  async create(createPedidoDto: CreatePedidoDto) {
+    await this.validateClienteExists(createPedidoDto.clienteId);
+    await this.validateVendedorExists(createPedidoDto.vendedorId);
+
+    const { totalNeto, detallesValidados } =
+      await this.validateAndBuildDetalles(createPedidoDto.detalles);
+
+    try {
+      const pedidoCreado = await this.prisma.$transaction(async (tx) => {
+        const pedido = await tx.pedido.create({
+          data: {
+            clienteId: createPedidoDto.clienteId,
+            vendedorId: createPedidoDto.vendedorId,
+            tipoPago: createPedidoDto.tipoPago,
+            subtotal: new Prisma.Decimal(totalNeto),
+            igv: new Prisma.Decimal(0),
+            total: new Prisma.Decimal(totalNeto),
+            estado: 'PENDIENTE',
+          },
+        });
+
+        await tx.detallePedido.createMany({
+          data: detallesValidados.map((detalle) => ({
+            pedidoId: pedido.pedidoId,
+            productoId: detalle.productoId,
+            cantidad: detalle.cantidad,
+            precioUnitario: new Prisma.Decimal(detalle.precioUnitario),
+            subtotal: new Prisma.Decimal(detalle.subtotalLinea),
+          })),
+        });
+
+        return tx.pedido.findUnique({
+          where: { pedidoId: pedido.pedidoId },
+          include: PEDIDO_INCLUDE,
+        });
+      });
+
+      if (!pedidoCreado) {
+        throw new InternalServerErrorException(
+          'No se pudo recuperar el pedido creado',
+        );
+      }
+
+      return this.mapPedidoResponse(pedidoCreado);
+    } catch (error) {
+      this.handleDBError(error);
+    }
+  }
+
+  async findAll(query: PaginationQueryDto) {
+    const currentPage = query.page ?? 1;
+    const itemsPerPage = query.limit ?? 10;
+    const skip = (currentPage - 1) * itemsPerPage;
+
+    const [pedidos, totalItems] = await Promise.all([
+      this.prisma.pedido.findMany({
+        include: PEDIDO_INCLUDE,
+        orderBy: { pedidoId: 'desc' },
+        skip,
+        take: itemsPerPage,
+      }),
+      this.prisma.pedido.count(),
+    ]);
+
+    return {
+      items: pedidos.map((pedido) => this.mapPedidoResponse(pedido)),
+      meta: {
+        pagination: buildPaginationMeta({
+          totalItems,
+          itemCount: pedidos.length,
+          itemsPerPage,
+          currentPage,
+        }),
+      },
+    };
+  }
+
+  async findOne(id: number) {
+    const pedido = await this.prisma.pedido.findUnique({
+      where: { pedidoId: id },
+      include: PEDIDO_INCLUDE,
     });
-    if (!cliente) {
-      throw new NotFoundException(
-        `Cliente con ID ${createPedidoDto.clienteId} no encontrado`,
+
+    if (!pedido) {
+      throw new NotFoundException(`Pedido con ID ${id} no encontrado`);
+    }
+
+    return this.mapPedidoResponse(pedido);
+  }
+
+  async update(id: number, updatePedidoDto: UpdatePedidoDto) {
+    const pedido = await this.findOne(id);
+
+    if (pedido.estadoPedido !== 'PENDIENTE') {
+      throw new BadRequestException(
+        'Solo se pueden actualizar pedidos en estado PENDIENTE',
       );
     }
 
-    // Validar que el vendedor existe
-    const vendedor = await this.vendedorRepository.findOne({
-      where: { vendedorId: createPedidoDto.vendedorId },
-    });
-    if (!vendedor) {
-      throw new NotFoundException(
-        `Vendedor con ID ${createPedidoDto.vendedorId} no encontrado`,
+    if (updatePedidoDto.clienteId) {
+      await this.validateClienteExists(updatePedidoDto.clienteId);
+    }
+
+    if (updatePedidoDto.vendedorId) {
+      await this.validateVendedorExists(updatePedidoDto.vendedorId);
+    }
+
+    let detallesValidados: Array<{
+      productoId: number;
+      cantidad: number;
+      precioUnitario: number;
+      subtotalLinea: number;
+      producto: {
+        nombre: string;
+        estadoRegistro: boolean;
+      };
+    }> | null = null;
+
+    let totalNeto: number | null = null;
+
+    if (updatePedidoDto.detalles && updatePedidoDto.detalles.length > 0) {
+      const detallesResult = await this.validateAndBuildDetalles(
+        updatePedidoDto.detalles,
+      );
+      detallesValidados = detallesResult.detallesValidados;
+      totalNeto = detallesResult.totalNeto;
+    }
+
+    try {
+      const pedidoActualizado = await this.prisma.$transaction(async (tx) => {
+        await tx.pedido.update({
+          where: { pedidoId: id },
+          data: {
+            clienteId: updatePedidoDto.clienteId,
+            vendedorId: updatePedidoDto.vendedorId,
+            tipoPago: updatePedidoDto.tipoPago,
+            subtotal:
+              totalNeto !== null ? new Prisma.Decimal(totalNeto) : undefined,
+            total:
+              totalNeto !== null ? new Prisma.Decimal(totalNeto) : undefined,
+          },
+        });
+
+        if (detallesValidados) {
+          await tx.detallePedido.deleteMany({
+            where: { pedidoId: id },
+          });
+
+          await tx.detallePedido.createMany({
+            data: detallesValidados.map((detalle) => ({
+              pedidoId: id,
+              productoId: detalle.productoId,
+              cantidad: detalle.cantidad,
+              precioUnitario: new Prisma.Decimal(detalle.precioUnitario),
+              subtotal: new Prisma.Decimal(detalle.subtotalLinea),
+            })),
+          });
+        }
+
+        return tx.pedido.findUnique({
+          where: { pedidoId: id },
+          include: PEDIDO_INCLUDE,
+        });
+      });
+
+      if (!pedidoActualizado) {
+        throw new InternalServerErrorException(
+          'No se pudo recuperar el pedido actualizado',
+        );
+      }
+
+      return this.mapPedidoResponse(pedidoActualizado);
+    } catch (error) {
+      this.handleDBError(error);
+    }
+  }
+
+  async changeEstado(id: number, changeEstadoDto: ChangeEstadoPedidoDto) {
+    const pedidoActual = await this.findOne(id);
+
+    if (pedidoActual.estadoPedido === 'COMPLETADO') {
+      throw new BadRequestException(
+        'No se puede cambiar el estado de un pedido completado',
       );
     }
 
-    // Validar que todos los productos existen y calcular totales
+    if (pedidoActual.estadoPedido === 'CANCELADO') {
+      throw new BadRequestException(
+        'No se puede cambiar el estado de un pedido cancelado',
+      );
+    }
+
+    const nuevoEstado = changeEstadoDto.estadoPedido;
+
+    if (nuevoEstado === 'COMPLETADO') {
+      return this.completePedidoAndUpdateEstado(id);
+    }
+
+    try {
+      const pedido = await this.prisma.pedido.update({
+        where: { pedidoId: id },
+        data: {
+          estado: nuevoEstado,
+        },
+        include: PEDIDO_INCLUDE,
+      });
+
+      return this.mapPedidoResponse(pedido);
+    } catch (error) {
+      this.handleDBError(error);
+    }
+  }
+
+  private async completePedidoAndUpdateEstado(id: number) {
+    let pedidoCompleto: Prisma.PedidoGetPayload<{
+      include: typeof PEDIDO_INCLUDE;
+    }> | null = null;
+
+    try {
+      pedidoCompleto = await this.prisma.$transaction(async (tx) => {
+        const pedido = await tx.pedido.findUnique({
+          where: { pedidoId: id },
+          include: PEDIDO_INCLUDE,
+        });
+
+        if (!pedido) {
+          throw new NotFoundException(`Pedido con ID ${id} no encontrado`);
+        }
+
+        for (const detalle of pedido.detalles) {
+          const inventario = await tx.inventario.findUnique({
+            where: { productoId: detalle.productoId },
+          });
+
+          if (!inventario) {
+            throw new BadRequestException(
+              `El producto ${detalle.producto.nombre} no tiene inventario configurado`,
+            );
+          }
+
+          if (inventario.cantidadActual < detalle.cantidad) {
+            throw new BadRequestException(
+              `Stock insuficiente para ${detalle.producto.nombre}. Disponible: ${inventario.cantidadActual}, Solicitado: ${detalle.cantidad}`,
+            );
+          }
+        }
+
+        for (const detalle of pedido.detalles) {
+          await tx.inventario.update({
+            where: { productoId: detalle.productoId },
+            data: {
+              cantidadActual: {
+                decrement: detalle.cantidad,
+              },
+            },
+          });
+
+          const producto = await tx.producto.findUnique({
+            where: { productoId: detalle.productoId },
+            select: { costoUnitario: true },
+          });
+
+          await tx.movimientoInventario.create({
+            data: {
+              productoId: detalle.productoId,
+              tipo: 'SALIDA',
+              cantidad: detalle.cantidad,
+              documentoReferenciaId: pedido.pedidoId,
+              origenMovimiento: 'PEDIDO',
+              costoUnitario: producto?.costoUnitario ?? new Prisma.Decimal(0),
+            },
+          });
+        }
+
+        return tx.pedido.update({
+          where: { pedidoId: id },
+          data: {
+            estado: 'COMPLETADO',
+          },
+          include: PEDIDO_INCLUDE,
+        });
+      });
+    } catch (error) {
+      this.handleDBError(error);
+    }
+
+    if (!pedidoCompleto) {
+      throw new InternalServerErrorException(
+        'No se pudo completar el pedido correctamente',
+      );
+    }
+
+    let pdfUrl: string | null = null;
+
+    try {
+      pdfUrl = await this.reportsService.saveNotaPedidoReport(
+        this.mapPedidoResponse(pedidoCompleto),
+      );
+    } catch (error) {
+      console.error('Error al generar PDF:', error);
+    }
+
+    if (pdfUrl) {
+      pedidoCompleto = await this.prisma.pedido.update({
+        where: { pedidoId: id },
+        data: {
+          pdfUrl,
+        },
+        include: PEDIDO_INCLUDE,
+      });
+    }
+
+    return this.mapPedidoResponse(pedidoCompleto);
+  }
+
+  private async validateAndBuildDetalles(
+    detalles: Array<{
+      productoId: number;
+      cantidad: number;
+    }>,
+  ) {
     let totalNeto = 0;
+
     const detallesValidados: Array<{
       productoId: number;
       cantidad: number;
       precioUnitario: number;
       subtotalLinea: number;
+      producto: {
+        nombre: string;
+        estadoRegistro: boolean;
+      };
     }> = [];
 
-    for (const detalle of createPedidoDto.detalles) {
-      const producto = await this.productoRepository.findOne({
+    for (const detalle of detalles) {
+      const producto = await this.prisma.producto.findUnique({
         where: { productoId: detalle.productoId },
-        relations: ['inventario'],
+        select: {
+          productoId: true,
+          nombre: true,
+          precioVenta: true,
+          estadoRegistro: true,
+        },
       });
 
       if (!producto) {
@@ -89,325 +383,119 @@ export class PedidosService {
 
       if (!producto.estadoRegistro) {
         throw new BadRequestException(
-          `El producto ${producto.nombre} está inactivo`,
+          `El producto ${producto.nombre} esta inactivo`,
         );
       }
 
-      const subtotal = producto.precioVenta * detalle.cantidad;
-      totalNeto += subtotal;
+      const precioUnitario = Number(producto.precioVenta);
+      const subtotalLinea = precioUnitario * detalle.cantidad;
+      totalNeto += subtotalLinea;
 
       detallesValidados.push({
-        productoId: producto.productoId,
+        productoId: detalle.productoId,
         cantidad: detalle.cantidad,
-        precioUnitario: producto.precioVenta,
-        subtotalLinea: subtotal,
+        precioUnitario,
+        subtotalLinea,
+        producto: {
+          nombre: producto.nombre,
+          estadoRegistro: producto.estadoRegistro,
+        },
       });
     }
 
-    // Calcular total final (puedes agregar impuestos aquí si es necesario)
-    const totalFinal = totalNeto; // Por ahora sin impuestos
-
-    // Crear el pedido usando transacción
-    const queryRunner = this.dataSource.createQueryRunner();
-    await queryRunner.connect();
-    await queryRunner.startTransaction();
-
-    try {
-      // Crear el pedido
-      const nuevoPedido = this.pedidoRepository.create({
-        clienteId: createPedidoDto.clienteId,
-        vendedorId: createPedidoDto.vendedorId,
-        tipoPago: createPedidoDto.tipoPago,
-        totalNeto,
-        totalFinal,
-        estadoPedido: EstadoPedido.PENDIENTE,
-        estadoRegistro: true,
-      });
-
-      const pedidoGuardado = await queryRunner.manager.save(nuevoPedido);
-
-      // Crear los detalles del pedido
-      for (const detalle of detallesValidados) {
-        const nuevoDetalle = this.detallePedidoRepository.create({
-          pedidoId: pedidoGuardado.pedidoId,
-          ...detalle,
-        });
-        await queryRunner.manager.save(nuevoDetalle);
-      }
-
-      await queryRunner.commitTransaction();
-
-      // Retornar el pedido completo con sus relaciones
-      return this.findOne(pedidoGuardado.pedidoId);
-    } catch (error) {
-      await queryRunner.rollbackTransaction();
-      throw error;
-    } finally {
-      await queryRunner.release();
-    }
+    return {
+      totalNeto,
+      detallesValidados,
+    };
   }
 
-  /**
-   * Obtiene todos los pedidos
-   */
-  async findAll(): Promise<Pedido[]> {
-    return this.pedidoRepository.find({
-      relations: ['cliente', 'vendedor', 'detalles', 'detalles.producto'],
-      order: { pedidoId: 'DESC' },
-    });
-  }
-
-  /**
-   * Obtiene un pedido por ID
-   */
-  async findOne(id: number): Promise<Pedido> {
-    const pedido = await this.pedidoRepository.findOne({
-      where: { pedidoId: id },
-      relations: ['cliente', 'vendedor', 'detalles', 'detalles.producto'],
+  private async validateClienteExists(clienteId: number) {
+    const cliente = await this.prisma.cliente.findUnique({
+      where: { clienteId },
+      select: { clienteId: true },
     });
 
-    if (!pedido) {
-      throw new NotFoundException(`Pedido con ID ${id} no encontrado`);
+    if (!cliente) {
+      throw new NotFoundException(`Cliente con ID ${clienteId} no encontrado`);
     }
-
-    return pedido;
   }
 
-  /**
-   * Actualiza un pedido (solo si está en estado PENDIENTE)
-   * Permite cambiar cliente, vendedor, tipo de pago y productos
-   */
-  async update(id: number, updatePedidoDto: UpdatePedidoDto): Promise<Pedido> {
-    const pedido = await this.findOne(id);
+  private async validateVendedorExists(vendedorId: number) {
+    const vendedor = await this.prisma.vendedor.findUnique({
+      where: { vendedorId },
+      select: { vendedorId: true },
+    });
 
-    // Solo se pueden actualizar pedidos en estado PENDIENTE
-    if (pedido.estadoPedido !== EstadoPedido.PENDIENTE) {
-      throw new BadRequestException(
-        'Solo se pueden actualizar pedidos en estado PENDIENTE',
+    if (!vendedor) {
+      throw new NotFoundException(
+        `Vendedor con ID ${vendedorId} no encontrado`,
       );
     }
+  }
 
-    const queryRunner = this.dataSource.createQueryRunner();
-    await queryRunner.connect();
-    await queryRunner.startTransaction();
+  private mapPedidoResponse(
+    pedido: Prisma.PedidoGetPayload<{ include: typeof PEDIDO_INCLUDE }>,
+  ) {
+    const detalles = pedido.detalles.map((detalle) => {
+      const inventario = (
+        detalle.producto as unknown as { inventario?: unknown }
+      ).inventario;
 
-    try {
-      // Si se está cambiando el cliente, validar que existe
-      if (updatePedidoDto.clienteId) {
-        const cliente = await this.clienteRepository.findOne({
-          where: { clienteId: updatePedidoDto.clienteId },
-        });
-        if (!cliente) {
-          throw new NotFoundException(
-            `Cliente con ID ${updatePedidoDto.clienteId} no encontrado`,
-          );
-        }
-        pedido.clienteId = updatePedidoDto.clienteId;
-      }
+      return {
+        detalleId: detalle.detalleId,
+        productoId: detalle.productoId,
+        producto: {
+          ...detalle.producto,
+          precioVenta: Number(detalle.producto.precioVenta),
+          costoReferencial: Number(detalle.producto.costoUnitario),
+          fechaModificacion: detalle.producto.fechaActualizacion,
+          inventario: inventario ?? null,
+        },
+        cantidad: detalle.cantidad,
+        precioUnitario: Number(detalle.precioUnitario),
+        subtotalLinea: Number(detalle.subtotal),
+      };
+    });
 
-      // Si se está cambiando el vendedor, validar que existe
-      if (updatePedidoDto.vendedorId) {
-        const vendedor = await this.vendedorRepository.findOne({
-          where: { vendedorId: updatePedidoDto.vendedorId },
-        });
-        if (!vendedor) {
-          throw new NotFoundException(
-            `Vendedor con ID ${updatePedidoDto.vendedorId} no encontrado`,
-          );
-        }
-        pedido.vendedorId = updatePedidoDto.vendedorId;
-      }
+    return {
+      pedidoId: pedido.pedidoId,
+      clienteId: pedido.clienteId,
+      cliente: pedido.cliente,
+      vendedorId: pedido.vendedorId,
+      vendedor: pedido.vendedor,
+      tipoPago: pedido.tipoPago,
+      totalNeto: Number(pedido.subtotal),
+      totalFinal: Number(pedido.total),
+      urlPdf: pedido.pdfUrl,
+      estadoPedido: pedido.estado,
+      estadoRegistro: pedido.estadoRegistro,
+      fechaCreacion: pedido.fechaCreacion,
+      fechaModificacion: pedido.fechaActualizacion,
+      detalles,
+    };
+  }
 
-      // Si se está cambiando el tipo de pago
-      if (updatePedidoDto.tipoPago) {
-        pedido.tipoPago = updatePedidoDto.tipoPago;
-      }
-
-      // Si se están actualizando los detalles
-      if (updatePedidoDto.detalles && updatePedidoDto.detalles.length > 0) {
-        // Eliminar los detalles actuales
-        await queryRunner.manager.delete(DetallePedido, {
-          pedidoId: pedido.pedidoId,
-        });
-
-        // Validar y crear nuevos detalles
-        let totalNeto = 0;
-
-        for (const detalle of updatePedidoDto.detalles) {
-          const producto = await this.productoRepository.findOne({
-            where: { productoId: detalle.productoId },
-            relations: ['inventario'],
-          });
-
-          if (!producto) {
-            throw new NotFoundException(
-              `Producto con ID ${detalle.productoId} no encontrado`,
-            );
-          }
-
-          if (!producto.estadoRegistro) {
-            throw new BadRequestException(
-              `El producto ${producto.nombre} está inactivo`,
-            );
-          }
-
-          const subtotal = producto.precioVenta * detalle.cantidad;
-          totalNeto += subtotal;
-
-          // Insertar directamente con queryRunner
-          await queryRunner.manager.insert(DetallePedido, {
-            pedidoId: pedido.pedidoId,
-            productoId: producto.productoId,
-            cantidad: detalle.cantidad,
-            precioUnitario: producto.precioVenta,
-            subtotalLinea: subtotal,
-          });
-        }
-
-        // Actualizar totales
-        pedido.totalNeto = totalNeto;
-        pedido.totalFinal = totalNeto; // Por ahora sin impuestos
-      }
-
-      // Actualizar el pedido usando update() para evitar problemas con las relaciones
-      await queryRunner.manager.update(Pedido, pedido.pedidoId, {
-        clienteId: pedido.clienteId,
-        vendedorId: pedido.vendedorId,
-        tipoPago: pedido.tipoPago,
-        totalNeto: pedido.totalNeto,
-        totalFinal: pedido.totalFinal,
-      });
-
-      await queryRunner.commitTransaction();
-
-      // Retornar el pedido actualizado con sus relaciones
-      return this.findOne(pedido.pedidoId);
-    } catch (error) {
-      await queryRunner.rollbackTransaction();
+  private handleDBError(error: unknown): never {
+    if (
+      error instanceof NotFoundException ||
+      error instanceof BadRequestException ||
+      error instanceof InternalServerErrorException
+    ) {
       throw error;
-    } finally {
-      await queryRunner.release();
-    }
-  }
-
-  /**
-   * Cambia el estado del pedido
-   * - COMPLETADO: Descuenta del inventario y crea movimientos
-   * - CANCELADO: No afecta el inventario
-   */
-  async changeEstado(
-    id: number,
-    changeEstadoDto: ChangeEstadoPedidoDto,
-  ): Promise<Pedido> {
-    const pedido = await this.findOne(id);
-
-    // Validar transiciones de estado
-    if (pedido.estadoPedido === EstadoPedido.COMPLETADO) {
-      throw new BadRequestException(
-        'No se puede cambiar el estado de un pedido completado',
-      );
     }
 
-    if (pedido.estadoPedido === EstadoPedido.CANCELADO) {
-      throw new BadRequestException(
-        'No se puede cambiar el estado de un pedido cancelado',
-      );
-    }
+    if (error instanceof Prisma.PrismaClientKnownRequestError) {
+      if (error.code === 'P2025') {
+        throw new NotFoundException('Registro no encontrado.');
+      }
 
-    const nuevoEstado = changeEstadoDto.estadoPedido as EstadoPedido;
-
-    // Si se está completando el pedido, validar stock y afectar inventario
-    if (nuevoEstado === EstadoPedido.COMPLETADO) {
-      await this.completarPedido(pedido);
-
-      // Generar el PDF de nota de pedido
-      try {
-        const pdfUrl = await this.reportsService.saveNotaPedidoReport(pedido);
-        pedido.urlPdf = pdfUrl;
-      } catch (error) {
-        console.error('Error al generar PDF:', error);
-        // No lanzamos error, solo log. El pedido se completa de todas formas
+      if (error.code === 'P2003') {
+        throw new BadRequestException(
+          'Error de llave foranea en la base de datos.',
+        );
       }
     }
 
-    // Actualizar estado
-    pedido.estadoPedido = nuevoEstado;
-    return this.pedidoRepository.save(pedido);
-  }
-
-  /**
-   * Completa un pedido: valida stock y descuenta del inventario
-   */
-  private async completarPedido(pedido: Pedido): Promise<void> {
-    const queryRunner = this.dataSource.createQueryRunner();
-    await queryRunner.connect();
-    await queryRunner.startTransaction();
-
-    try {
-      // Validar stock de todos los productos
-      for (const detalle of pedido.detalles) {
-        const inventario = await queryRunner.manager.findOne(Inventario, {
-          where: { producto: { productoId: detalle.productoId } },
-          relations: ['producto'],
-        });
-
-        if (!inventario) {
-          throw new BadRequestException(
-            `El producto ${detalle.producto.nombre} no tiene inventario configurado`,
-          );
-        }
-
-        if (inventario.cantidadActual < detalle.cantidad) {
-          throw new BadRequestException(
-            `Stock insuficiente para ${detalle.producto.nombre}. ` +
-              `Disponible: ${inventario.cantidadActual}, Solicitado: ${detalle.cantidad}`,
-          );
-        }
-      }
-
-      // Descontar del inventario y crear movimientos
-      for (const detalle of pedido.detalles) {
-        // Buscar el inventario del producto
-        const inventario = await queryRunner.manager.findOne(Inventario, {
-          where: { producto: { productoId: detalle.productoId } },
-          relations: ['producto'],
-        });
-
-        if (!inventario) {
-          throw new BadRequestException(
-            `Inventario no encontrado para el producto ${detalle.producto.nombre}`,
-          );
-        }
-
-        // Actualizar cantidad actual
-        inventario.cantidadActual -= detalle.cantidad;
-        await queryRunner.manager.save(inventario);
-
-        // Obtener el costo referencial del producto (snapshot histórico)
-        const producto = await queryRunner.manager.findOne(Producto, {
-          where: { productoId: detalle.productoId },
-        });
-
-        const costoUnitario = producto?.costoReferencial ?? 0;
-
-        // Crear movimiento de salida con patrón polimórfico
-        const movimiento = this.movimientoInventarioRepository.create({
-          productoId: detalle.productoId,
-          tipoMovimiento: TipoMovimientoInventario.SALIDA,
-          cantidad: detalle.cantidad,
-          documentoReferenciaId: pedido.pedidoId,
-          origenMovimiento: OrigenMovimiento.PEDIDO,
-          costoUnitario: costoUnitario,
-        });
-        await queryRunner.manager.save(movimiento);
-      }
-
-      await queryRunner.commitTransaction();
-    } catch (error) {
-      await queryRunner.rollbackTransaction();
-      throw error;
-    } finally {
-      await queryRunner.release();
-    }
+    throw new InternalServerErrorException('Database error');
   }
 }

@@ -7,4 +7,4 @@ import { ProveedoresController } from './proveedores.controller';
   providers: [ProveedoresService],
   exports: [ProveedoresService],
 })
-export class ProveedoresModule { }
+export class ProveedoresModule {}

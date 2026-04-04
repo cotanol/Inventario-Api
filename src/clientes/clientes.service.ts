@@ -3,14 +3,17 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
+import { Prisma } from 'generated/prisma/client';
 import { CreateClienteDto } from './dto/create-cliente.dto';
 import { UpdateClienteDto } from './dto/update-cliente.dto';
 import { ChangeStatusDto } from './dto/change-status.dto';
 import { PrismaService } from 'src/prisma/prisma.service';
+import { PaginationQueryDto } from 'src/common/dto/pagination-query.dto';
+import { buildPaginationMeta } from 'src/common/utils/pagination.util';
 
 @Injectable()
 export class ClientesService {
-  constructor(private readonly prisma: PrismaService) { }
+  constructor(private readonly prisma: PrismaService) {}
 
   async create(createClienteDto: CreateClienteDto) {
     // Validar que el vendedor existe
@@ -29,18 +32,42 @@ export class ClientesService {
         include: { vendedor: true },
       });
     } catch (error) {
-      if (error.code === 'P2002') {
+      if (
+        error instanceof Prisma.PrismaClientKnownRequestError &&
+        error.code === 'P2002'
+      ) {
         throw new ConflictException('Ya existe un cliente con ese RUC o email');
       }
       throw error;
     }
   }
 
-  async findAll() {
-    return await this.prisma.cliente.findMany({
-      include: { vendedor: true },
-      orderBy: { nombre: 'asc' },
-    });
+  async findAll(query: PaginationQueryDto) {
+    const currentPage = query.page ?? 1;
+    const itemsPerPage = query.limit ?? 10;
+    const skip = (currentPage - 1) * itemsPerPage;
+
+    const [items, totalItems] = await Promise.all([
+      this.prisma.cliente.findMany({
+        include: { vendedor: true },
+        orderBy: { nombre: 'asc' },
+        skip,
+        take: itemsPerPage,
+      }),
+      this.prisma.cliente.count(),
+    ]);
+
+    return {
+      items,
+      meta: {
+        pagination: buildPaginationMeta({
+          totalItems,
+          itemCount: items.length,
+          itemsPerPage,
+          currentPage,
+        }),
+      },
+    };
   }
 
   async findOne(id: number) {
@@ -78,7 +105,10 @@ export class ClientesService {
         include: { vendedor: true },
       });
     } catch (error) {
-      if (error.code === 'P2002') {
+      if (
+        error instanceof Prisma.PrismaClientKnownRequestError &&
+        error.code === 'P2002'
+      ) {
         throw new ConflictException('Ya existe un cliente con ese RUC o email');
       }
       throw error;
