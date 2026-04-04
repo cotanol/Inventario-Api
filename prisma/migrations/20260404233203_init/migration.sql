@@ -1,5 +1,5 @@
 -- CreateEnum
-CREATE TYPE "TipoPermiso" AS ENUM ('MENU', 'ACCION');
+CREATE TYPE "PermisoModulo" AS ENUM ('USUARIOS', 'PRODUCTOS', 'CLIENTES', 'MARCAS', 'LINEAS', 'GRUPOS', 'ROLES', 'VENDEDORES', 'PROVEEDORES', 'COMPRAS', 'PEDIDOS');
 
 -- CreateEnum
 CREATE TYPE "TipoMovimientoInventario" AS ENUM ('ENTRADA', 'SALIDA');
@@ -19,12 +19,12 @@ CREATE TYPE "EstadoCompra" AS ENUM ('BORRADOR', 'ORDENADO', 'EN_TRANSITO', 'COMP
 -- CreateTable
 CREATE TABLE "usuario" (
     "usuario_id" SERIAL NOT NULL,
-    "dni" VARCHAR(20) NOT NULL,
     "nombre" VARCHAR(100) NOT NULL,
     "apellido" VARCHAR(100) NOT NULL,
-    "email" VARCHAR(150) NOT NULL,
-    "password" VARCHAR(255) NOT NULL,
+    "correoElectronico" VARCHAR(150) NOT NULL,
+    "clave" VARCHAR(255) NOT NULL,
     "estado_registro" BOOLEAN NOT NULL DEFAULT true,
+    "rol_id" INTEGER NOT NULL,
     "fecha_creacion" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "fecha_actualizacion" TIMESTAMP(3) NOT NULL,
 
@@ -32,49 +32,16 @@ CREATE TABLE "usuario" (
 );
 
 -- CreateTable
-CREATE TABLE "perfil" (
-    "perfil_id" SERIAL NOT NULL,
-    "nombre" VARCHAR(100) NOT NULL,
+CREATE TABLE "rol" (
+    "rol_id" SERIAL NOT NULL,
+    "nombre" VARCHAR(50) NOT NULL,
     "descripcion" VARCHAR(255),
     "estado_registro" BOOLEAN NOT NULL DEFAULT true,
+    "permisos" "PermisoModulo"[],
     "fecha_creacion" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "fecha_actualizacion" TIMESTAMP(3) NOT NULL,
 
-    CONSTRAINT "perfil_pkey" PRIMARY KEY ("perfil_id")
-);
-
--- CreateTable
-CREATE TABLE "permiso" (
-    "permiso_id" SERIAL NOT NULL,
-    "nombre" VARCHAR(100) NOT NULL,
-    "descripcion" VARCHAR(255),
-    "tipo" "TipoPermiso" NOT NULL,
-    "ruta" VARCHAR(255),
-    "icono" VARCHAR(100),
-    "orden" INTEGER NOT NULL DEFAULT 0,
-    "estado_registro" BOOLEAN NOT NULL DEFAULT true,
-    "fecha_creacion" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    "fecha_actualizacion" TIMESTAMP(3) NOT NULL,
-    "permiso_padre_id" INTEGER,
-
-    CONSTRAINT "permiso_pkey" PRIMARY KEY ("permiso_id")
-);
-
--- CreateTable
-CREATE TABLE "permiso_perfil" (
-    "permiso_id" INTEGER NOT NULL,
-    "perfil_id" INTEGER NOT NULL,
-    "orden" INTEGER NOT NULL DEFAULT 0,
-
-    CONSTRAINT "permiso_perfil_pkey" PRIMARY KEY ("permiso_id","perfil_id")
-);
-
--- CreateTable
-CREATE TABLE "usuario_perfil" (
-    "usuario_id" INTEGER NOT NULL,
-    "perfil_id" INTEGER NOT NULL,
-
-    CONSTRAINT "usuario_perfil_pkey" PRIMARY KEY ("usuario_id","perfil_id")
+    CONSTRAINT "rol_pkey" PRIMARY KEY ("rol_id")
 );
 
 -- CreateTable
@@ -95,9 +62,9 @@ CREATE TABLE "grupo" (
     "nombre" VARCHAR(100) NOT NULL,
     "descripcion" VARCHAR(255),
     "estado_registro" BOOLEAN NOT NULL DEFAULT true,
+    "linea_id" INTEGER NOT NULL,
     "fecha_creacion" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "fecha_actualizacion" TIMESTAMP(3) NOT NULL,
-    "linea_id" INTEGER NOT NULL,
 
     CONSTRAINT "grupo_pkey" PRIMARY KEY ("grupo_id")
 );
@@ -124,10 +91,10 @@ CREATE TABLE "producto" (
     "costo_unitario" DECIMAL(12,2) NOT NULL DEFAULT 0,
     "unidad_medida" VARCHAR(50) NOT NULL DEFAULT 'UNIDAD',
     "estado_registro" BOOLEAN NOT NULL DEFAULT true,
-    "fecha_creacion" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    "fecha_actualizacion" TIMESTAMP(3) NOT NULL,
     "grupo_id" INTEGER NOT NULL,
     "marca_id" INTEGER NOT NULL,
+    "fecha_creacion" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "fecha_actualizacion" TIMESTAMP(3) NOT NULL,
 
     CONSTRAINT "producto_pkey" PRIMARY KEY ("producto_id")
 );
@@ -138,9 +105,9 @@ CREATE TABLE "inventario" (
     "cantidad_actual" INTEGER NOT NULL DEFAULT 0,
     "cantidad_minima" INTEGER NOT NULL DEFAULT 0,
     "estado_registro" BOOLEAN NOT NULL DEFAULT true,
+    "producto_id" INTEGER NOT NULL,
     "fecha_creacion" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "fecha_actualizacion" TIMESTAMP(3) NOT NULL,
-    "producto_id" INTEGER NOT NULL,
 
     CONSTRAINT "inventario_pkey" PRIMARY KEY ("inventario_id")
 );
@@ -154,8 +121,9 @@ CREATE TABLE "movimiento_inventario" (
     "documento_referencia_id" INTEGER,
     "origen_movimiento" "OrigenMovimiento" NOT NULL,
     "observacion" TEXT,
-    "fecha_creacion" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "producto_id" INTEGER NOT NULL,
+    "fecha_creacion" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "fecha_actualizacion" TIMESTAMP(3) NOT NULL,
 
     CONSTRAINT "movimiento_inventario_pkey" PRIMARY KEY ("movimiento_id")
 );
@@ -170,7 +138,7 @@ CREATE TABLE "vendedores" (
     "correo" VARCHAR(100) NOT NULL,
     "estado_registro" BOOLEAN NOT NULL DEFAULT true,
     "fecha_creacion" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    "fecha_modificacion" TIMESTAMP(3),
+    "fecha_actualizacion" TIMESTAMP(3) NOT NULL,
 
     CONSTRAINT "vendedores_pkey" PRIMARY KEY ("vendedor_id")
 );
@@ -188,9 +156,9 @@ CREATE TABLE "clientes" (
     "provincia" VARCHAR(50) NOT NULL,
     "distrito" VARCHAR(50) NOT NULL,
     "estado_registro" BOOLEAN NOT NULL DEFAULT true,
-    "fecha_creacion" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    "fecha_modificacion" TIMESTAMP(3),
     "vendedor_id" INTEGER NOT NULL,
+    "fecha_creacion" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "fecha_actualizacion" TIMESTAMP(3) NOT NULL,
 
     CONSTRAINT "clientes_pkey" PRIMARY KEY ("cliente_id")
 );
@@ -207,7 +175,7 @@ CREATE TABLE "proveedores" (
     "pais" VARCHAR(50) NOT NULL,
     "estado_registro" BOOLEAN NOT NULL DEFAULT true,
     "fecha_creacion" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    "fecha_modificacion" TIMESTAMP(3),
+    "fecha_actualizacion" TIMESTAMP(3) NOT NULL,
 
     CONSTRAINT "proveedores_pkey" PRIMARY KEY ("proveedor_id")
 );
@@ -223,10 +191,10 @@ CREATE TABLE "pedido" (
     "observaciones" TEXT,
     "pdf_url" VARCHAR(255),
     "estado_registro" BOOLEAN NOT NULL DEFAULT true,
-    "fecha_creacion" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    "fecha_actualizacion" TIMESTAMP(3) NOT NULL,
     "cliente_id" INTEGER NOT NULL,
     "vendedor_id" INTEGER NOT NULL,
+    "fecha_creacion" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "fecha_actualizacion" TIMESTAMP(3) NOT NULL,
 
     CONSTRAINT "pedido_pkey" PRIMARY KEY ("pedido_id")
 );
@@ -239,6 +207,8 @@ CREATE TABLE "detalle_pedido" (
     "subtotal" DECIMAL(12,2) NOT NULL,
     "pedido_id" INTEGER NOT NULL,
     "producto_id" INTEGER NOT NULL,
+    "fecha_creacion" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "fecha_actualizacion" TIMESTAMP(3) NOT NULL,
 
     CONSTRAINT "detalle_pedido_pkey" PRIMARY KEY ("detalle_id")
 );
@@ -253,9 +223,9 @@ CREATE TABLE "compra" (
     "observaciones" TEXT,
     "pdf_url" VARCHAR(255),
     "estado_registro" BOOLEAN NOT NULL DEFAULT true,
+    "proveedor_id" INTEGER NOT NULL,
     "fecha_creacion" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "fecha_actualizacion" TIMESTAMP(3) NOT NULL,
-    "proveedor_id" INTEGER NOT NULL,
 
     CONSTRAINT "compra_pkey" PRIMARY KEY ("compra_id")
 );
@@ -269,18 +239,17 @@ CREATE TABLE "detalle_compra" (
     "subtotal" DECIMAL(12,2) NOT NULL,
     "compra_id" INTEGER NOT NULL,
     "producto_id" INTEGER NOT NULL,
+    "fecha_creacion" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "fecha_actualizacion" TIMESTAMP(3) NOT NULL,
 
     CONSTRAINT "detalle_compra_pkey" PRIMARY KEY ("detalle_id")
 );
 
 -- CreateIndex
-CREATE UNIQUE INDEX "usuario_dni_key" ON "usuario"("dni");
+CREATE UNIQUE INDEX "usuario_correoElectronico_key" ON "usuario"("correoElectronico");
 
 -- CreateIndex
-CREATE UNIQUE INDEX "usuario_email_key" ON "usuario"("email");
-
--- CreateIndex
-CREATE UNIQUE INDEX "perfil_nombre_key" ON "perfil"("nombre");
+CREATE UNIQUE INDEX "rol_nombre_key" ON "rol"("nombre");
 
 -- CreateIndex
 CREATE UNIQUE INDEX "linea_nombre_key" ON "linea"("nombre");
@@ -313,19 +282,7 @@ CREATE UNIQUE INDEX "clientes_email_key" ON "clientes"("email");
 CREATE UNIQUE INDEX "proveedores_numero_identificacion_fiscal_key" ON "proveedores"("numero_identificacion_fiscal");
 
 -- AddForeignKey
-ALTER TABLE "permiso" ADD CONSTRAINT "permiso_permiso_padre_id_fkey" FOREIGN KEY ("permiso_padre_id") REFERENCES "permiso"("permiso_id") ON DELETE SET NULL ON UPDATE CASCADE;
-
--- AddForeignKey
-ALTER TABLE "permiso_perfil" ADD CONSTRAINT "permiso_perfil_permiso_id_fkey" FOREIGN KEY ("permiso_id") REFERENCES "permiso"("permiso_id") ON DELETE RESTRICT ON UPDATE CASCADE;
-
--- AddForeignKey
-ALTER TABLE "permiso_perfil" ADD CONSTRAINT "permiso_perfil_perfil_id_fkey" FOREIGN KEY ("perfil_id") REFERENCES "perfil"("perfil_id") ON DELETE RESTRICT ON UPDATE CASCADE;
-
--- AddForeignKey
-ALTER TABLE "usuario_perfil" ADD CONSTRAINT "usuario_perfil_usuario_id_fkey" FOREIGN KEY ("usuario_id") REFERENCES "usuario"("usuario_id") ON DELETE RESTRICT ON UPDATE CASCADE;
-
--- AddForeignKey
-ALTER TABLE "usuario_perfil" ADD CONSTRAINT "usuario_perfil_perfil_id_fkey" FOREIGN KEY ("perfil_id") REFERENCES "perfil"("perfil_id") ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE "usuario" ADD CONSTRAINT "usuario_rol_id_fkey" FOREIGN KEY ("rol_id") REFERENCES "rol"("rol_id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "grupo" ADD CONSTRAINT "grupo_linea_id_fkey" FOREIGN KEY ("linea_id") REFERENCES "linea"("linea_id") ON DELETE RESTRICT ON UPDATE CASCADE;
