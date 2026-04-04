@@ -111,56 +111,28 @@ export const swaggerExamples = {
   },
   authUser: {
     usuarioId: 1,
-    dni: '12345678',
     nombres: 'Administrador',
-    apellidoPaterno: 'General',
-    apellidoMaterno: null,
+    apellido: 'General',
     correoElectronico: 'admin@inventario.pe',
-    perfiles: ['ADMINISTRADOR'],
-    permisos: ['VER_USUARIOS', 'CREAR_USUARIO'],
+    rol: 'admin',
+    permisos: ['USUARIOS', 'PRODUCTOS'],
   },
   authSession: {
     user: {
       usuarioId: 1,
       nombres: 'Administrador',
       correoElectronico: 'admin@inventario.pe',
-      perfiles: ['ADMINISTRADOR'],
+      rol: 'admin',
     },
     token: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...',
   },
-  perfil: {
-    perfilId: 2,
-    nombre: 'VENTAS',
-    descripcion: 'Perfil para operaciones de ventas',
+  role: {
+    rolId: 2,
+    nombre: 'vendedor',
+    descripcion: 'Rol para operaciones comerciales',
     estadoRegistro: true,
-    permisosLink: [
-      {
-        permisoId: 11,
-        orden: 1,
-        permiso: {
-          permisoId: 11,
-          nombre: 'VER_PEDIDOS',
-          descripcion: 'Visualizar pedidos',
-        },
-      },
-    ],
+    permisos: ['CLIENTES', 'PEDIDOS'],
   },
-  permiso: {
-    permisoId: 11,
-    nombre: 'VER_PEDIDOS',
-    descripcion: 'Visualizar pedidos',
-  },
-  menu: [
-    {
-      id: 1,
-      nombre: 'Dashboard',
-      urlMenu: '/dashboard',
-      descripcion: 'Panel principal',
-      idPadre: null,
-      orden: 1,
-      hijos: [],
-    },
-  ],
   statusMessage: {
     message: 'Operacion realizada correctamente.',
   },

@@ -8,6 +8,7 @@ import {
   ParseIntPipe,
   Query,
 } from '@nestjs/common';
+import { PermisoModulo } from 'generated/prisma/client';
 import { CatalogoService } from './catalogo.service';
 import {
   CreateLineaDto,
@@ -21,7 +22,6 @@ import {
   ChangeStatusDto,
 } from './dto';
 import { RequirePermissions } from 'src/auth/decorators/require-permissions.decorator';
-import { ValidPermissions } from 'src/auth/interfaces/valid-permissions.interface';
 import { PaginationQueryDto } from 'src/common/dto/pagination-query.dto';
 import {
   ApiPaginationQueryDocs,
@@ -36,7 +36,7 @@ export class CatalogoController {
 
   // === ENDPOINTS LÍNEAS ===
   @Post('lineas')
-  @RequirePermissions(ValidPermissions.CREAR_LINEA)
+  @RequirePermissions(PermisoModulo.LINEAS)
   @ApiStandardItemResponse('Linea creada correctamente', 'created', {
     dataExample: swaggerExamples.linea,
   })
@@ -45,7 +45,7 @@ export class CatalogoController {
   }
 
   @Get('lineas')
-  @RequirePermissions(ValidPermissions.VER_LINEAS)
+  @RequirePermissions(PermisoModulo.LINEAS)
   @ApiPaginationQueryDocs()
   @ApiStandardListResponse('Lista paginada de lineas', swaggerExamples.linea)
   findAllLineas(@Query() paginationQuery: PaginationQueryDto) {
@@ -53,7 +53,7 @@ export class CatalogoController {
   }
 
   @Get('lineas/:id')
-  @RequirePermissions(ValidPermissions.VER_LINEAS)
+  @RequirePermissions(PermisoModulo.LINEAS)
   @ApiStandardItemResponse('Linea obtenida correctamente', 'ok', {
     dataExample: swaggerExamples.linea,
   })
@@ -62,7 +62,7 @@ export class CatalogoController {
   }
 
   @Patch('lineas/:id')
-  @RequirePermissions(ValidPermissions.EDITAR_LINEA)
+  @RequirePermissions(PermisoModulo.LINEAS)
   @ApiStandardItemResponse('Linea actualizada correctamente', 'ok', {
     dataExample: swaggerExamples.linea,
   })
@@ -74,7 +74,7 @@ export class CatalogoController {
   }
 
   @Patch('lineas/:id/change-status')
-  @RequirePermissions(ValidPermissions.EDITAR_LINEA)
+  @RequirePermissions(PermisoModulo.LINEAS)
   @ApiStandardItemResponse('Estado de linea actualizado correctamente', 'ok', {
     dataExample: swaggerExamples.linea,
   })
@@ -87,7 +87,7 @@ export class CatalogoController {
 
   // === ENDPOINTS GRUPOS ===
   @Post('grupos')
-  @RequirePermissions(ValidPermissions.CREAR_GRUPO)
+  @RequirePermissions(PermisoModulo.GRUPOS)
   @ApiStandardItemResponse('Grupo creado correctamente', 'created', {
     dataExample: swaggerExamples.grupo,
   })
@@ -96,7 +96,7 @@ export class CatalogoController {
   }
 
   @Get('grupos')
-  @RequirePermissions(ValidPermissions.VER_GRUPOS)
+  @RequirePermissions(PermisoModulo.GRUPOS)
   @ApiPaginationQueryDocs()
   @ApiStandardListResponse('Lista paginada de grupos', swaggerExamples.grupo)
   findAllGrupos(@Query() paginationQuery: PaginationQueryDto) {
@@ -104,7 +104,7 @@ export class CatalogoController {
   }
 
   @Get('grupos/linea/:lineaId')
-  @RequirePermissions(ValidPermissions.VER_GRUPOS)
+  @RequirePermissions(PermisoModulo.GRUPOS)
   @ApiPaginationQueryDocs()
   @ApiStandardListResponse(
     'Lista paginada de grupos por linea',
@@ -118,7 +118,7 @@ export class CatalogoController {
   }
 
   @Get('grupos/:id')
-  @RequirePermissions(ValidPermissions.VER_GRUPOS)
+  @RequirePermissions(PermisoModulo.GRUPOS)
   @ApiStandardItemResponse('Grupo obtenido correctamente', 'ok', {
     dataExample: swaggerExamples.grupo,
   })
@@ -127,7 +127,7 @@ export class CatalogoController {
   }
 
   @Patch('grupos/:id')
-  @RequirePermissions(ValidPermissions.EDITAR_GRUPO)
+  @RequirePermissions(PermisoModulo.GRUPOS)
   @ApiStandardItemResponse('Grupo actualizado correctamente', 'ok', {
     dataExample: swaggerExamples.grupo,
   })
@@ -139,7 +139,7 @@ export class CatalogoController {
   }
 
   @Patch('grupos/:id/change-status')
-  @RequirePermissions(ValidPermissions.EDITAR_GRUPO)
+  @RequirePermissions(PermisoModulo.GRUPOS)
   @ApiStandardItemResponse('Estado de grupo actualizado correctamente', 'ok', {
     dataExample: swaggerExamples.grupo,
   })
@@ -152,7 +152,7 @@ export class CatalogoController {
 
   // === ENDPOINTS MARCAS ===
   @Post('marcas')
-  @RequirePermissions(ValidPermissions.CREAR_MARCA)
+  @RequirePermissions(PermisoModulo.MARCAS)
   @ApiStandardItemResponse('Marca creada correctamente', 'created', {
     dataExample: swaggerExamples.marca,
   })
@@ -161,7 +161,7 @@ export class CatalogoController {
   }
 
   @Get('marcas')
-  @RequirePermissions(ValidPermissions.VER_MARCAS)
+  @RequirePermissions(PermisoModulo.MARCAS)
   @ApiPaginationQueryDocs()
   @ApiStandardListResponse('Lista paginada de marcas', swaggerExamples.marca)
   findAllMarcas(@Query() paginationQuery: PaginationQueryDto) {
@@ -169,7 +169,7 @@ export class CatalogoController {
   }
 
   @Get('marcas/:id')
-  @RequirePermissions(ValidPermissions.VER_MARCAS)
+  @RequirePermissions(PermisoModulo.MARCAS)
   @ApiStandardItemResponse('Marca obtenida correctamente', 'ok', {
     dataExample: swaggerExamples.marca,
   })
@@ -178,7 +178,7 @@ export class CatalogoController {
   }
 
   @Patch('marcas/:id')
-  @RequirePermissions(ValidPermissions.EDITAR_MARCA)
+  @RequirePermissions(PermisoModulo.MARCAS)
   @ApiStandardItemResponse('Marca actualizada correctamente', 'ok', {
     dataExample: swaggerExamples.marca,
   })
@@ -190,7 +190,7 @@ export class CatalogoController {
   }
 
   @Patch('marcas/:id/change-status')
-  @RequirePermissions(ValidPermissions.EDITAR_MARCA)
+  @RequirePermissions(PermisoModulo.MARCAS)
   @ApiStandardItemResponse('Estado de marca actualizado correctamente', 'ok', {
     dataExample: swaggerExamples.marca,
   })
@@ -203,7 +203,7 @@ export class CatalogoController {
 
   // === ENDPOINTS PRODUCTOS ===
   @Post('productos')
-  @RequirePermissions(ValidPermissions.CREAR_PRODUCTO)
+  @RequirePermissions(PermisoModulo.PRODUCTOS)
   @ApiStandardItemResponse('Producto creado correctamente', 'created', {
     dataExample: swaggerExamples.producto,
   })
@@ -212,7 +212,7 @@ export class CatalogoController {
   }
 
   @Get('productos')
-  @RequirePermissions(ValidPermissions.VER_PRODUCTOS)
+  @RequirePermissions(PermisoModulo.PRODUCTOS)
   @ApiPaginationQueryDocs()
   @ApiStandardListResponse(
     'Lista paginada de productos',
@@ -223,7 +223,7 @@ export class CatalogoController {
   }
 
   @Get('productos/:id')
-  @RequirePermissions(ValidPermissions.VER_PRODUCTOS)
+  @RequirePermissions(PermisoModulo.PRODUCTOS)
   @ApiStandardItemResponse('Producto obtenido correctamente', 'ok', {
     dataExample: swaggerExamples.producto,
   })
@@ -232,7 +232,7 @@ export class CatalogoController {
   }
 
   @Patch('productos/:id')
-  @RequirePermissions(ValidPermissions.EDITAR_PRODUCTO)
+  @RequirePermissions(PermisoModulo.PRODUCTOS)
   @ApiStandardItemResponse('Producto actualizado correctamente', 'ok', {
     dataExample: swaggerExamples.producto,
   })
@@ -244,7 +244,7 @@ export class CatalogoController {
   }
 
   @Patch('productos/:id/change-status')
-  @RequirePermissions(ValidPermissions.EDITAR_PRODUCTO)
+  @RequirePermissions(PermisoModulo.PRODUCTOS)
   @ApiStandardItemResponse(
     'Estado de producto actualizado correctamente',
     'ok',

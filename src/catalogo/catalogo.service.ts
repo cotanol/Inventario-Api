@@ -23,7 +23,7 @@ import { buildPaginationMeta } from 'src/common/utils/pagination.util';
 
 @Injectable()
 export class CatalogoService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(private readonly prisma: PrismaService) { }
 
   async createLinea(createLineaDto: CreateLineaDto) {
     return this.prisma.linea.create({
@@ -93,10 +93,7 @@ export class CatalogoService {
       where: {
         lineaId: id,
       },
-      data: {
-        nombre: updateLineaDto.nombre,
-        estadoRegistro: updateLineaDto.estadoRegistro,
-      },
+      data: updateLineaDto,
       include: {
         grupos: true,
       },
@@ -123,11 +120,7 @@ export class CatalogoService {
     await this.findOneLinea(createGrupoDto.lineaId);
 
     return this.prisma.grupo.create({
-      data: {
-        nombre: createGrupoDto.nombre,
-        estadoRegistro: createGrupoDto.estadoRegistro,
-        lineaId: createGrupoDto.lineaId,
-      },
+      data: createGrupoDto,
       include: {
         linea: true,
         productos: true,
@@ -251,11 +244,7 @@ export class CatalogoService {
       where: {
         grupoId: id,
       },
-      data: {
-        nombre: updateGrupoDto.nombre,
-        estadoRegistro: updateGrupoDto.estadoRegistro,
-        lineaId: updateGrupoDto.lineaId,
-      },
+      data: updateGrupoDto,
       include: {
         linea: true,
         productos: {
@@ -290,10 +279,7 @@ export class CatalogoService {
 
   async createMarca(createMarcaDto: CreateMarcaDto) {
     return this.prisma.marca.create({
-      data: {
-        nombre: createMarcaDto.nombre,
-        estadoRegistro: createMarcaDto.estadoRegistro,
-      },
+      data: createMarcaDto,
       include: {
         productos: {
           include: {
@@ -383,10 +369,7 @@ export class CatalogoService {
       where: {
         marcaId: id,
       },
-      data: {
-        nombre: updateMarcaDto.nombre,
-        estadoRegistro: updateMarcaDto.estadoRegistro,
-      },
+      data: updateMarcaDto,
       include: {
         productos: {
           include: {

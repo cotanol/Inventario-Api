@@ -8,12 +8,12 @@ import {
   ParseIntPipe,
   Query,
 } from '@nestjs/common';
+import { PermisoModulo } from 'generated/prisma/client';
 import { ClientesService } from './clientes.service';
 import { CreateClienteDto } from './dto/create-cliente.dto';
 import { UpdateClienteDto } from './dto/update-cliente.dto';
 import { ChangeStatusDto } from './dto/change-status.dto';
 import { RequirePermissions } from 'src/auth/decorators/require-permissions.decorator';
-import { ValidPermissions } from 'src/auth/interfaces/valid-permissions.interface';
 import { PaginationQueryDto } from 'src/common/dto/pagination-query.dto';
 import {
   ApiPaginationQueryDocs,
@@ -27,7 +27,7 @@ export class ClientesController {
   constructor(private readonly clientesService: ClientesService) {}
 
   @Post()
-  @RequirePermissions(ValidPermissions.CREAR_CLIENTE)
+  @RequirePermissions(PermisoModulo.CLIENTES)
   @ApiStandardItemResponse('Cliente creado correctamente', 'created', {
     dataExample: swaggerExamples.cliente,
   })
@@ -36,7 +36,7 @@ export class ClientesController {
   }
 
   @Get()
-  @RequirePermissions(ValidPermissions.VER_CLIENTES)
+  @RequirePermissions(PermisoModulo.CLIENTES)
   @ApiPaginationQueryDocs()
   @ApiStandardListResponse(
     'Lista paginada de clientes',
@@ -47,7 +47,7 @@ export class ClientesController {
   }
 
   @Get(':id')
-  @RequirePermissions(ValidPermissions.VER_CLIENTES)
+  @RequirePermissions(PermisoModulo.CLIENTES)
   @ApiStandardItemResponse('Cliente obtenido correctamente', 'ok', {
     dataExample: swaggerExamples.cliente,
   })
@@ -56,7 +56,7 @@ export class ClientesController {
   }
 
   @Patch(':id')
-  @RequirePermissions(ValidPermissions.EDITAR_CLIENTE)
+  @RequirePermissions(PermisoModulo.CLIENTES)
   @ApiStandardItemResponse('Cliente actualizado correctamente', 'ok', {
     dataExample: swaggerExamples.cliente,
   })
@@ -68,7 +68,7 @@ export class ClientesController {
   }
 
   @Patch(':id/change-status')
-  @RequirePermissions(ValidPermissions.ELIMINAR_CLIENTE)
+  @RequirePermissions(PermisoModulo.CLIENTES)
   @ApiStandardItemResponse(
     'Estado de cliente actualizado correctamente',
     'ok',

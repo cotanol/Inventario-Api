@@ -6,6 +6,7 @@ import {
   ForbiddenException,
   Injectable,
 } from '@nestjs/common';
+import { PermisoModulo } from 'generated/prisma/client';
 import { Request } from 'express';
 import { Observable } from 'rxjs';
 import { AuthenticatedUser } from '../interfaces/authenticated-user.interface';
@@ -34,23 +35,15 @@ export class UserPermissionGuard implements CanActivate {
 
     if (!user) throw new BadRequestException('User not found');
 
-    // Extraer todos los permisos únicos del usuario desde sus perfiles
-    const userPermissions = new Set<string>();
-    user.perfilesLink?.forEach((userProfile) => {
-      userProfile.permisosLink?.forEach((permisoLink) => {
-        if (permisoLink.estadoRegistro && permisoLink.keyPermiso) {
-          userPermissions.add(permisoLink.keyPermiso);
-        }
-      });
-    });
+    const userPermissions = new Set<PermisoModulo>(user.permisos);
 
     // Verificar si el usuario tiene al menos uno de los permisos requeridos
     for (const permission of validPermissions) {
-      if (userPermissions.has(permission)) return true;
+      if (userPermissions.has(permission as PermisoModulo)) return true;
     }
 
     throw new ForbiddenException(
-      `User ${user.nombres + ' ' + user.apellidoPaterno} needs one of these permissions: [${validPermissions.join(', ')}]`,
+      `User ${user.nombres + ' ' + user.apellido} needs one of these permissions: [${validPermissions.join(', ')}]`,
     );
   }
 }

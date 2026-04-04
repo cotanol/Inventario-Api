@@ -1,7 +1,7 @@
 import { SetMetadata } from '@nestjs/common';
-import { ValidPermissions } from '../interfaces/valid-permissions.interface';
+import { PermisoModulo } from 'generated/prisma/client';
 
 export const META_PERMISSIONS = 'permissions';
 
-export const PermissionProtected = (...args: ValidPermissions[]) =>
+export const PermissionProtected = (...args: PermisoModulo[]) =>
   SetMetadata(META_PERMISSIONS, args);

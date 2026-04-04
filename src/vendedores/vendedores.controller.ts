@@ -8,10 +8,10 @@ import {
   ParseIntPipe,
   Query,
 } from '@nestjs/common';
+import { PermisoModulo } from 'generated/prisma/client';
 import { VendedoresService } from './vendedores.service';
 import { CreateVendedorDto, UpdateVendedorDto, ChangeStatusDto } from './dto';
 import { RequirePermissions } from 'src/auth/decorators/require-permissions.decorator';
-import { ValidPermissions } from 'src/auth/interfaces/valid-permissions.interface';
 import { PaginationQueryDto } from 'src/common/dto/pagination-query.dto';
 import {
   ApiPaginationQueryDocs,
@@ -25,7 +25,7 @@ export class VendedoresController {
   constructor(private readonly vendedoresService: VendedoresService) {}
 
   @Post()
-  @RequirePermissions(ValidPermissions.CREAR_VENDEDOR)
+  @RequirePermissions(PermisoModulo.VENDEDORES)
   @ApiStandardItemResponse('Vendedor creado correctamente', 'created', {
     dataExample: swaggerExamples.vendedor,
   })
@@ -34,7 +34,7 @@ export class VendedoresController {
   }
 
   @Get()
-  @RequirePermissions(ValidPermissions.VER_VENDEDORES)
+  @RequirePermissions(PermisoModulo.VENDEDORES)
   @ApiPaginationQueryDocs()
   @ApiStandardListResponse(
     'Lista paginada de vendedores',
@@ -45,7 +45,7 @@ export class VendedoresController {
   }
 
   @Get(':id')
-  @RequirePermissions(ValidPermissions.VER_VENDEDORES)
+  @RequirePermissions(PermisoModulo.VENDEDORES)
   @ApiStandardItemResponse('Vendedor obtenido correctamente', 'ok', {
     dataExample: swaggerExamples.vendedor,
   })
@@ -54,7 +54,7 @@ export class VendedoresController {
   }
 
   @Patch(':id')
-  @RequirePermissions(ValidPermissions.EDITAR_VENDEDOR)
+  @RequirePermissions(PermisoModulo.VENDEDORES)
   @ApiStandardItemResponse('Vendedor actualizado correctamente', 'ok', {
     dataExample: swaggerExamples.vendedor,
   })
@@ -66,7 +66,7 @@ export class VendedoresController {
   }
 
   @Patch(':id/change-status')
-  @RequirePermissions(ValidPermissions.EDITAR_VENDEDOR)
+  @RequirePermissions(PermisoModulo.VENDEDORES)
   @ApiStandardItemResponse(
     'Estado de vendedor actualizado correctamente',
     'ok',

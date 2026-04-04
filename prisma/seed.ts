@@ -3,7 +3,7 @@ import 'dotenv/config';
 import * as bcrypt from 'bcrypt';
 import { PrismaPg } from '@prisma/adapter-pg';
 import { Pool } from 'pg';
-import { PrismaClient, TipoPermiso } from '../generated/prisma/client';
+import { PrismaClient } from '../generated/prisma/client';
 
 import { initialData } from './seed-data';
 
@@ -17,137 +17,51 @@ const pool = new Pool({ connectionString });
 const adapter = new PrismaPg(pool);
 const prisma = new PrismaClient({ adapter });
 
-const REQUIRED_TABLES = [
-  'usuario',
-  'perfil',
-  'permiso',
-  'usuario_perfil',
-  'permiso_perfil',
-] as const;
-
-async function ensureRequiredTables() {
-  const rows = await prisma.$queryRawUnsafe<Array<{ table_name: string }>>(
-    `
-      SELECT table_name
-      FROM information_schema.tables
-      WHERE table_schema = 'public'
-    `,
-  );
-
-  const existing = new Set(rows.map((row) => row.table_name));
-  const missing = REQUIRED_TABLES.filter(
-    (tableName) => !existing.has(tableName),
-  );
-
-  if (missing.length > 0) {
-    throw new Error(
-      `Faltan tablas del esquema Prisma (${missing.join(', ')}). Ejecuta primero las migraciones de Prisma y vuelve a correr el seed.`,
-    );
-  }
-}
-
-async function deleteTables() {
-  await prisma.usuarioPerfil.deleteMany();
-  await prisma.permisoPerfil.deleteMany();
-
+async function clearAuthData() {
   await prisma.usuario.deleteMany();
-  await prisma.perfil.deleteMany();
+  await prisma.rol.deleteMany();
+}
 
-  await prisma.permiso.updateMany({
-    data: {
-      permisoPadreId: null,
-    },
+async function seedRoles() {
+  await prisma.rol.createMany({
+    data: initialData.roles,
   });
-  await prisma.permiso.deleteMany();
 }
 
-async function syncSequences() {
-  await prisma.$executeRawUnsafe(
-    `SELECT setval(pg_get_serial_sequence('"usuario"', 'usuario_id'), COALESCE(MAX(usuario_id), 1), true) FROM "usuario"`,
-  );
+async function seedUsers() {
+  const roles = await prisma.rol.findMany({
+    select: { rolId: true, nombre: true },
+  });
 
-  await prisma.$executeRawUnsafe(
-    `SELECT setval(pg_get_serial_sequence('"perfil"', 'perfil_id'), COALESCE(MAX(perfil_id), 1), true) FROM "perfil"`,
-  );
+  const roleMap = new Map(roles.map((rol) => [rol.nombre, rol.rolId]));
 
-  await prisma.$executeRawUnsafe(
-    `SELECT setval(pg_get_serial_sequence('"permiso"', 'permiso_id'), COALESCE(MAX(permiso_id), 1), true) FROM "permiso"`,
-  );
-}
+  for (const user of initialData.usuarios) {
+    const rolId = roleMap.get(user.rol);
 
-async function insertUsuarios() {
-  for (const usuario of initialData.usuarios) {
-    const hashedPassword = await bcrypt.hash(usuario.clave, 10);
+    if (!rolId) {
+      throw new Error(`No existe el rol '${user.rol}' para el seed de usuarios.`);
+    }
+
+    const hashedPassword = await bcrypt.hash(user.clave, 10);
 
     await prisma.usuario.create({
       data: {
-        usuarioId: usuario.usuarioId,
-        nombre: usuario.nombres,
-        apellido: [usuario.apellidoPaterno, usuario.apellidoMaterno]
-          .filter((value): value is string => Boolean(value))
-          .join(' ')
-          .trim(),
-        email: usuario.correoElectronico,
+        nombre: user.nombre,
+        apellido: user.apellido,
+        email: user.correoElectronico.toLowerCase().trim(),
         password: hashedPassword,
+        rolId,
       },
     });
   }
 }
 
-async function insertPerfiles() {
-  await prisma.perfil.createMany({
-    data: initialData.perfiles.map((perfil) => ({
-      perfilId: perfil.perfilId,
-      nombre: perfil.nombre,
-      descripcion: perfil.descripcion,
-    })),
-  });
-}
-
-async function insertPermisos() {
-  await prisma.permiso.createMany({
-    data: initialData.permisos.map((permiso) => ({
-      permisoId: permiso.permisoId,
-      nombre: permiso.nombre,
-      keyPermiso: permiso.keyPermiso,
-      tipo: permiso.tipoPermiso,
-      ruta: permiso.urlMenu,
-      descripcion: permiso.descripcion,
-      permisoPadreId: permiso.permisoPadreId,
-    })),
-  });
-}
-
-async function assignPermisosToPerfiles() {
-  await prisma.permisoPerfil.createMany({
-    data: initialData.permisosPerfiles.map((permisoPerfil) => ({
-      permisoId: permisoPerfil.permisoId,
-      perfilId: permisoPerfil.perfilId,
-      orden: permisoPerfil.orden,
-    })),
-  });
-}
-
-async function assignPerfilesToUsuarios() {
-  await prisma.usuarioPerfil.createMany({
-    data: initialData.usuariosPerfiles.map((usuarioPerfil) => ({
-      usuarioId: usuarioPerfil.usuarioId,
-      perfilId: usuarioPerfil.perfilId,
-    })),
-  });
-}
-
 async function main() {
-  console.log('Iniciando seed con Prisma...');
+  console.log('Iniciando seed con Prisma (roles simplificados)...');
 
-  await ensureRequiredTables();
-  await deleteTables();
-  await insertUsuarios();
-  await insertPerfiles();
-  await insertPermisos();
-  await assignPermisosToPerfiles();
-  await assignPerfilesToUsuarios();
-  await syncSequences();
+  await clearAuthData();
+  await seedRoles();
+  await seedUsers();
 
   console.log('SEED EXECUTED');
 }

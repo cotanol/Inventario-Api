@@ -1,7 +1,8 @@
 import { Injectable, UnauthorizedException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { PassportStrategy } from '@nestjs/passport';
-import { ExtractJwt, Strategy } from 'passport-jwt';
+import { Request } from 'express';
+import { Strategy } from 'passport-jwt';
 
 import { PrismaService } from 'src/prisma/prisma.service';
 
@@ -13,9 +14,24 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
     private readonly prisma: PrismaService,
     configService: ConfigService,
   ) {
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-call
     super({
-      secretOrKey: configService.get<string>('JWT_SECRET'),
-      jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),
+      secretOrKey: configService.getOrThrow<string>('JWT_SECRET'),
+      jwtFromRequest: (request: Request): string | null => {
+        const authorization = request.headers.authorization;
+
+        if (!authorization) {
+          return null;
+        }
+
+        const [scheme, token] = authorization.split(' ');
+
+        if (scheme?.toLowerCase() !== 'bearer' || !token) {
+          return null;
+        }
+
+        return token;
+      },
     });
   }
 
@@ -24,21 +40,7 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
 
     const user = await this.prisma.usuario.findUnique({
       where: { usuarioId },
-      include: {
-        perfiles: {
-          include: {
-            perfil: {
-              include: {
-                permisos: {
-                  include: {
-                    permiso: true,
-                  },
-                },
-              },
-            },
-          },
-        },
-      },
+      include: { rol: true },
     });
 
     if (!user) {
@@ -52,30 +54,13 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
     return {
       usuarioId: user.usuarioId,
       nombres: user.nombre,
-      apellidoPaterno: user.apellido,
-      apellidoMaterno: null,
+      apellido: user.apellido,
       correoElectronico: user.email,
       estadoRegistro: user.estadoRegistro,
       fechaCreacion: user.fechaCreacion,
       fechaModificacion: user.fechaActualizacion,
-      perfilesLink: user.perfiles.map((perfilLink) => ({
-        perfilId: perfilLink.perfil.perfilId,
-        nombre: perfilLink.perfil.nombre,
-        descripcion: perfilLink.perfil.descripcion,
-        estadoRegistro: perfilLink.perfil.estadoRegistro,
-        permisosLink: perfilLink.perfil.permisos.map((permisoLink) => ({
-          permisoId: permisoLink.permiso.permisoId,
-          nombre: permisoLink.permiso.nombre,
-          keyPermiso: permisoLink.permiso.keyPermiso,
-          descripcion: permisoLink.permiso.descripcion,
-          tipoPermiso: permisoLink.permiso.tipo,
-          urlMenu: permisoLink.permiso.ruta,
-          icono: permisoLink.permiso.icono,
-          idPadre: permisoLink.permiso.permisoPadreId,
-          estadoRegistro: permisoLink.permiso.estadoRegistro,
-          orden: permisoLink.orden,
-        })),
-      })),
+      rol: user.rol.nombre,
+      permisos: user.rol.permisos,
     };
   }
 }

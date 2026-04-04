@@ -20,78 +20,42 @@ model Usuario {
   password       String  @db.VarChar(255)
   estadoRegistro Boolean @default(true) @map("estado_registro")
 
+  rolId Int @map("rol_id")
+  rol   Rol @relation(fields: [rolId], references: [rolId])
+
   fechaCreacion      DateTime @default(now()) @map("fecha_creacion")
   fechaActualizacion DateTime @updatedAt @map("fecha_actualizacion")
-
-  perfiles UsuarioPerfil[]
 
   @@map("usuario")
 }
 
-model Perfil {
-  perfilId       Int     @id @default(autoincrement()) @map("perfil_id")
-  nombre         String  @unique @db.VarChar(100)
-  descripcion    String? @db.VarChar(255)
+enum PermisoModulo {
+  USUARIOS
+  PRODUCTOS
+  CLIENTES
+  MARCAS
+  LINEAS
+  GRUPOS
+  ROLES
+  VENDEDORES
+  PROVEEDORES
+  COMPRAS
+  PEDIDOS
+}
+
+model Rol {
+  rolId          Int            @id @default(autoincrement()) @map("rol_id")
+  nombre         String         @unique @db.VarChar(50)
+  descripcion    String?        @db.VarChar(255)
+  permisos       PermisoModulo[]
   estadoRegistro Boolean @default(true) @map("estado_registro")
 
   fechaCreacion      DateTime @default(now()) @map("fecha_creacion")
   fechaActualizacion DateTime @updatedAt @map("fecha_actualizacion")
 
-  usuarios UsuarioPerfil[]
-  permisos PermisoPerfil[]
+  usuarios Usuario[]
 
-  @@map("perfil")
-}
-
-enum TipoPermiso {
-  MENU
-  ACCION
-}
-
-model Permiso {
-  permisoId      Int         @id @default(autoincrement()) @map("permiso_id")
-  nombre         String      @db.VarChar(100)
-  descripcion    String?     @db.VarChar(255)
-  tipo           TipoPermiso
-  ruta           String?     @db.VarChar(255)
-  keyPermiso     String?     @map("key_permiso") @db.VarChar(100)
-  icono          String?     @db.VarChar(100)
-  orden          Int         @default(0)
-  estadoRegistro Boolean     @default(true) @map("estado_registro")
-
-  fechaCreacion      DateTime @default(now()) @map("fecha_creacion")
-  fechaActualizacion DateTime @updatedAt @map("fecha_actualizacion")
-
-  permisoPadreId Int?      @map("permiso_padre_id")
-  permisoPadre   Permiso?  @relation("PermisoJerarquia", fields: [permisoPadreId], references: [permisoId])
-  permisosHijos  Permiso[] @relation("PermisoJerarquia")
-
-  perfiles PermisoPerfil[]
-
-  @@map("permiso")
-}
-
-model PermisoPerfil {
-  permisoId Int @map("permiso_id")
-  perfilId  Int @map("perfil_id")
-  orden     Int @default(0)
-
-  permiso Permiso @relation(fields: [permisoId], references: [permisoId])
-  perfil  Perfil  @relation(fields: [perfilId], references: [perfilId])
-
-  @@id([permisoId, perfilId])
-  @@map("permiso_perfil")
-}
-
-model UsuarioPerfil {
-  usuarioId Int @map("usuario_id")
-  perfilId  Int @map("perfil_id")
-
-  usuario Usuario @relation(fields: [usuarioId], references: [usuarioId])
-  perfil  Perfil  @relation(fields: [perfilId], references: [perfilId])
-
-  @@id([usuarioId, perfilId])
-  @@map("usuario_perfil")
+  @@map("rol")
 }
 
 // ========================

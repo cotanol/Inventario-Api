@@ -9,11 +9,11 @@ import {
   ParseIntPipe,
   Query,
 } from '@nestjs/common';
+import { PermisoModulo } from 'generated/prisma/client';
 import { ProveedoresService } from './proveedores.service';
 import { CreateProveedorDto } from './dto/create-proveedor.dto';
 import { UpdateProveedorDto } from './dto/update-proveedor.dto';
 import { RequirePermissions } from 'src/auth/decorators/require-permissions.decorator';
-import { ValidPermissions } from 'src/auth/interfaces/valid-permissions.interface';
 import { PaginationQueryDto } from 'src/common/dto/pagination-query.dto';
 import {
   ApiPaginationQueryDocs,
@@ -27,7 +27,7 @@ export class ProveedoresController {
   constructor(private readonly proveedoresService: ProveedoresService) {}
 
   @Post()
-  @RequirePermissions(ValidPermissions.CREAR_PROVEEDOR)
+  @RequirePermissions(PermisoModulo.PROVEEDORES)
   @ApiStandardItemResponse('Proveedor creado correctamente', 'created', {
     dataExample: swaggerExamples.proveedor,
   })
@@ -36,7 +36,7 @@ export class ProveedoresController {
   }
 
   @Get()
-  @RequirePermissions(ValidPermissions.VER_PROVEEDORES)
+  @RequirePermissions(PermisoModulo.PROVEEDORES)
   @ApiPaginationQueryDocs()
   @ApiStandardListResponse(
     'Lista paginada de proveedores',
@@ -47,7 +47,7 @@ export class ProveedoresController {
   }
 
   @Get(':id')
-  @RequirePermissions(ValidPermissions.VER_PROVEEDORES)
+  @RequirePermissions(PermisoModulo.PROVEEDORES)
   @ApiStandardItemResponse('Proveedor obtenido correctamente', 'ok', {
     dataExample: swaggerExamples.proveedor,
   })
@@ -56,7 +56,7 @@ export class ProveedoresController {
   }
 
   @Patch(':id')
-  @RequirePermissions(ValidPermissions.EDITAR_PROVEEDOR)
+  @RequirePermissions(PermisoModulo.PROVEEDORES)
   @ApiStandardItemResponse('Proveedor actualizado correctamente', 'ok', {
     dataExample: swaggerExamples.proveedor,
   })
@@ -68,7 +68,7 @@ export class ProveedoresController {
   }
 
   @Delete(':id')
-  @RequirePermissions(ValidPermissions.ELIMINAR_PROVEEDOR)
+  @RequirePermissions(PermisoModulo.PROVEEDORES)
   @ApiStandardItemResponse('Proveedor eliminado correctamente', 'ok', {
     dataExample: swaggerExamples.statusMessage,
   })

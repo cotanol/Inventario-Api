@@ -1,9 +1,9 @@
 import { applyDecorators, UseGuards } from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
 import { ApiBearerAuth } from '@nestjs/swagger';
+import { PermisoModulo } from 'generated/prisma/client';
 import { UserPermissionGuard } from '../guards/user-permission.guard';
 import { PermissionProtected } from './permission-protected.decorator';
-import { ValidPermissions } from '../interfaces/valid-permissions.interface';
 
 /**
  * Decorador para proteger rutas con permisos específicos
@@ -14,13 +14,13 @@ import { ValidPermissions } from '../interfaces/valid-permissions.interface';
  * // Solo autenticación
  * @RequirePermissions()
  *
- * // Requiere el permiso CREAR_USUARIO
- * @RequirePermissions(ValidPermissions.CREAR_USUARIO)
+ * // Requiere el permiso del módulo USUARIOS
+ * @RequirePermissions(PermisoModulo.USUARIOS)
  *
  * // Requiere al menos uno de estos permisos
- * @RequirePermissions(ValidPermissions.CREAR_USUARIO, ValidPermissions.EDITAR_USUARIO)
+ * @RequirePermissions(PermisoModulo.USUARIOS, PermisoModulo.ROLES)
  */
-export function RequirePermissions(...permissions: ValidPermissions[]) {
+export function RequirePermissions(...permissions: PermisoModulo[]) {
   return applyDecorators(
     PermissionProtected(...permissions),
     UseGuards(AuthGuard(), UserPermissionGuard),

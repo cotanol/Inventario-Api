@@ -9,6 +9,7 @@ import {
   ParseIntPipe,
   Query,
 } from '@nestjs/common';
+import { PermisoModulo } from 'generated/prisma/client';
 import { ComprasService } from './compras.service';
 import { CreateCompraDto } from './dto/create-compra.dto';
 import {
@@ -17,7 +18,6 @@ import {
   RecibirMercaderiaDto,
 } from './dto/update-compra.dto';
 import { RequirePermissions } from 'src/auth/decorators/require-permissions.decorator';
-import { ValidPermissions } from 'src/auth/interfaces/valid-permissions.interface';
 import { PaginationQueryDto } from 'src/common/dto/pagination-query.dto';
 import {
   ApiPaginationQueryDocs,
@@ -31,7 +31,7 @@ export class ComprasController {
   constructor(private readonly comprasService: ComprasService) {}
 
   @Post()
-  @RequirePermissions(ValidPermissions.CREAR_COMPRA)
+  @RequirePermissions(PermisoModulo.COMPRAS)
   @ApiStandardItemResponse('Compra creada correctamente', 'created', {
     dataExample: swaggerExamples.compra,
   })
@@ -40,7 +40,7 @@ export class ComprasController {
   }
 
   @Get()
-  @RequirePermissions(ValidPermissions.VER_COMPRAS)
+  @RequirePermissions(PermisoModulo.COMPRAS)
   @ApiPaginationQueryDocs()
   @ApiStandardListResponse('Lista paginada de compras', swaggerExamples.compra)
   findAll(@Query() paginationQuery: PaginationQueryDto) {
@@ -48,7 +48,7 @@ export class ComprasController {
   }
 
   @Get(':id')
-  @RequirePermissions(ValidPermissions.VER_COMPRAS)
+  @RequirePermissions(PermisoModulo.COMPRAS)
   @ApiStandardItemResponse('Compra obtenida correctamente', 'ok', {
     dataExample: swaggerExamples.compra,
   })
@@ -57,7 +57,7 @@ export class ComprasController {
   }
 
   @Patch(':id')
-  @RequirePermissions(ValidPermissions.EDITAR_COMPRA)
+  @RequirePermissions(PermisoModulo.COMPRAS)
   @ApiStandardItemResponse('Compra actualizada correctamente', 'ok', {
     dataExample: swaggerExamples.compra,
   })
@@ -69,7 +69,7 @@ export class ComprasController {
   }
 
   @Delete(':id')
-  @RequirePermissions(ValidPermissions.ELIMINAR_COMPRA)
+  @RequirePermissions(PermisoModulo.COMPRAS)
   @ApiStandardItemResponse('Compra eliminada correctamente', 'ok', {
     dataExample: swaggerExamples.statusMessage,
   })
@@ -82,7 +82,7 @@ export class ComprasController {
   // ============================================================
 
   @Patch(':id/confirmar')
-  @RequirePermissions(ValidPermissions.EDITAR_COMPRA)
+  @RequirePermissions(PermisoModulo.COMPRAS)
   @ApiStandardItemResponse('Compra confirmada correctamente', 'ok', {
     dataExample: swaggerExamples.compra,
   })
@@ -94,7 +94,7 @@ export class ComprasController {
   }
 
   @Patch(':id/transito')
-  @RequirePermissions(ValidPermissions.EDITAR_COMPRA)
+  @RequirePermissions(PermisoModulo.COMPRAS)
   @ApiStandardItemResponse('Compra marcada en transito correctamente', 'ok', {
     dataExample: swaggerExamples.compra,
   })
@@ -106,7 +106,7 @@ export class ComprasController {
   }
 
   @Patch(':id/recepcion')
-  @RequirePermissions(ValidPermissions.EDITAR_COMPRA)
+  @RequirePermissions(PermisoModulo.COMPRAS)
   @ApiStandardItemResponse('Mercaderia recibida correctamente', 'ok', {
     dataExample: swaggerExamples.compra,
   })
@@ -118,7 +118,7 @@ export class ComprasController {
   }
 
   @Patch(':id/cancelar')
-  @RequirePermissions(ValidPermissions.EDITAR_COMPRA)
+  @RequirePermissions(PermisoModulo.COMPRAS)
   @ApiStandardItemResponse('Compra cancelada correctamente', 'ok', {
     dataExample: swaggerExamples.compra,
   })
