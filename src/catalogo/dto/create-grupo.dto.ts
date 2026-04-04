@@ -12,11 +12,11 @@ export class CreateGrupoDto {
   @IsString()
   @IsNotEmpty()
   @MaxLength(50)
-  nombre: string;
+  nombre!: string;
 
   @IsNumber()
   @IsPositive()
-  lineaId: number;
+  lineaId!: number;
 
   @IsBoolean()
   @IsOptional()

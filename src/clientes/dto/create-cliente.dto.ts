@@ -12,17 +12,17 @@ export class CreateClienteDto {
   @IsString()
   @IsNotEmpty()
   @MaxLength(50)
-  nombre: string;
+  nombre!: string;
 
   @IsString()
   @IsNotEmpty()
   @Length(11, 11, { message: 'El RUC debe tener exactamente 11 dígitos' })
-  ruc: string;
+  ruc!: string;
 
   @IsString()
   @IsNotEmpty()
   @MaxLength(50)
-  direccion: string;
+  direccion!: string;
 
   @IsOptional()
   @IsString()
@@ -32,29 +32,29 @@ export class CreateClienteDto {
   @IsEmail()
   @IsNotEmpty()
   @MaxLength(100)
-  email: string;
+  email!: string;
 
   @IsString()
   @IsNotEmpty()
   @MaxLength(50)
-  clasificacion: string;
+  clasificacion!: string;
 
   @IsString()
   @IsNotEmpty()
   @MaxLength(50)
-  departamento: string;
+  departamento!: string;
 
   @IsString()
   @IsNotEmpty()
   @MaxLength(50)
-  provincia: string;
+  provincia!: string;
 
   @IsString()
   @IsNotEmpty()
   @MaxLength(50)
-  distrito: string;
+  distrito!: string;
 
   @IsInt()
   @IsNotEmpty()
-  vendedorId: number;
+  vendedorId!: number;
 }

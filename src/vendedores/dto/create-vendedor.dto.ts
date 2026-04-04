@@ -11,12 +11,12 @@ export class CreateVendedorDto {
   @IsString()
   @IsNotEmpty()
   @MaxLength(50)
-  nombres: string;
+  nombres!: string;
 
   @IsString()
   @IsNotEmpty()
   @MaxLength(50)
-  apellidoPaterno: string;
+  apellidoPaterno!: string;
 
   @IsOptional()
   @IsString()
@@ -26,10 +26,10 @@ export class CreateVendedorDto {
   @IsString()
   @IsNotEmpty()
   @Length(8, 8, { message: 'El DNI debe tener exactamente 8 dígitos' })
-  dni: string;
+  dni!: string;
 
   @IsEmail()
   @IsNotEmpty()
   @MaxLength(100)
-  correo: string;
+  correo!: string;
 }

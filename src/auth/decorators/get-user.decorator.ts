@@ -3,16 +3,21 @@ import {
   ExecutionContext,
   InternalServerErrorException,
 } from '@nestjs/common';
+import { Request } from 'express';
+
+import { AuthenticatedUser } from '../interfaces/authenticated-user.interface';
 
 export const GetUser = createParamDecorator(
-  (data: string, ctx: ExecutionContext) => {
-    const req = ctx.switchToHttp().getRequest();
+  (data: keyof AuthenticatedUser | undefined, ctx: ExecutionContext) => {
+    const req = ctx
+      .switchToHttp()
+      .getRequest<Request & { user?: AuthenticatedUser }>();
     const user = req.user;
 
     if (!user) {
-      throw new InternalServerErrorException('User not found in request'); // Nosotros intentamos conseguir el user del Guard
+      throw new InternalServerErrorException('User not found in request');
     }
 
-    return !data ? user : user[data]; // Si no se pasa data, se devuelve el user completo, si se pasa, se devuelve el campo que se pide
+    return !data ? user : user[data];
   },
 );

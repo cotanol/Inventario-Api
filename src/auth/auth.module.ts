@@ -1,26 +1,13 @@
 import { Module } from '@nestjs/common';
 import { AuthService } from './auth.service';
 import { AuthController } from './auth.controller';
-import { TypeOrmModule } from '@nestjs/typeorm';
-import { Usuario } from './entities/usuario.entity';
 import { PassportModule } from '@nestjs/passport';
 import { JwtModule } from '@nestjs/jwt';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { JwtStrategy } from './strategies/jwt.strategy';
-import { Permiso } from './entities/permiso.entity';
-import { PermisoPerfil } from './entities/permiso-perfil.entity';
-import { UsuarioPerfil } from './entities/usuario-perfil.entity';
-import { Perfil } from './entities/perfil.entity';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([
-      Usuario,
-      Perfil,
-      UsuarioPerfil,
-      PermisoPerfil,
-      Permiso,
-    ]),
     PassportModule.register({ defaultStrategy: 'jwt' }),
     JwtModule.registerAsync({
       imports: [ConfigModule],
@@ -35,6 +22,6 @@ import { Perfil } from './entities/perfil.entity';
   ],
   controllers: [AuthController],
   providers: [AuthService, JwtStrategy],
-  exports: [TypeOrmModule, JwtStrategy, PassportModule, JwtModule],
+  exports: [JwtStrategy, PassportModule, JwtModule],
 })
 export class AuthModule {}

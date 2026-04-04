@@ -1,30 +1,49 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
-import { CreateProveedorDto } from './dto/create-proveedor.dto';
-import { UpdateProveedorDto } from './dto/update-proveedor.dto';
-import { Proveedor } from './entities/proveedor.entity';
+import { ChangeStatusDto } from 'src/common/dto/change-status.dto';
+import { CreateProveedorDto, UpdateProveedorDto } from './dto';
+import { PrismaService } from 'src/prisma/prisma.service';
+import { PaginationQueryDto } from 'src/common/dto/pagination-query.dto';
+import { buildPaginationMeta } from 'src/common/utils/pagination.util';
 
 @Injectable()
 export class ProveedoresService {
-  constructor(
-    @InjectRepository(Proveedor)
-    private readonly proveedorRepository: Repository<Proveedor>,
-  ) {}
+  constructor(private readonly prisma: PrismaService) {}
 
-  async create(createProveedorDto: CreateProveedorDto): Promise<Proveedor> {
-    const proveedor = this.proveedorRepository.create(createProveedorDto);
-    return await this.proveedorRepository.save(proveedor);
-  }
-
-  async findAll(): Promise<Proveedor[]> {
-    return await this.proveedorRepository.find({
-      order: { fechaCreacion: 'DESC' },
+  async create(createProveedorDto: CreateProveedorDto) {
+    return await this.prisma.proveedor.create({
+      data: createProveedorDto,
     });
   }
 
-  async findOne(id: number): Promise<Proveedor> {
-    const proveedor = await this.proveedorRepository.findOne({
+  async findAll(query: PaginationQueryDto) {
+    const currentPage = query.page ?? 1;
+    const itemsPerPage = query.limit ?? 10;
+    const skip = (currentPage - 1) * itemsPerPage;
+
+    const [items, totalItems] = await Promise.all([
+      this.prisma.proveedor.findMany({
+        orderBy: { fechaCreacion: 'desc' },
+        skip,
+        take: itemsPerPage,
+      }),
+      this.prisma.proveedor.count(),
+    ]);
+
+    return {
+      items,
+      meta: {
+        pagination: buildPaginationMeta({
+          totalItems,
+          itemCount: items.length,
+          itemsPerPage,
+          currentPage,
+        }),
+      },
+    };
+  }
+
+  async findOne(id: number) {
+    const proveedor = await this.prisma.proveedor.findUnique({
       where: { proveedorId: id },
     });
 
@@ -35,17 +54,24 @@ export class ProveedoresService {
     return proveedor;
   }
 
-  async update(
-    id: number,
-    updateProveedorDto: UpdateProveedorDto,
-  ): Promise<Proveedor> {
-    const proveedor = await this.findOne(id);
-    Object.assign(proveedor, updateProveedorDto);
-    return await this.proveedorRepository.save(proveedor);
+  async update(id: number, updateProveedorDto: UpdateProveedorDto) {
+    await this.findOne(id);
+    return await this.prisma.proveedor.update({
+      where: { proveedorId: id },
+      data: updateProveedorDto,
+    });
   }
 
-  async remove(id: number): Promise<void> {
-    const proveedor = await this.findOne(id);
-    await this.proveedorRepository.remove(proveedor);
+  async changeStatus(id: number, changeStatusDto: ChangeStatusDto) {
+    await this.findOne(id);
+
+    await this.prisma.proveedor.update({
+      where: { proveedorId: id },
+      data: { estadoRegistro: changeStatusDto.estadoRegistro },
+    });
+
+    return {
+      message: `Estado del proveedor actualizado a ${changeStatusDto.estadoRegistro ? 'activo' : 'inactivo'}.`,
+    };
   }
 }

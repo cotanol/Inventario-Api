@@ -1,149 +1,229 @@
 import {
+  BadRequestException,
   Injectable,
-  NotFoundException,
-  ConflictException,
   InternalServerErrorException,
+  NotFoundException,
 } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
-import { DataSource, Repository } from 'typeorm';
+import { Prisma } from 'generated/prisma/client';
+
 import {
-  CreateLineaDto,
-  UpdateLineaDto,
   CreateGrupoDto,
-  UpdateGrupoDto,
+  CreateLineaDto,
   CreateMarcaDto,
-  UpdateMarcaDto,
   CreateProductoDto,
+  UpdateGrupoDto,
+  UpdateLineaDto,
+  UpdateMarcaDto,
   UpdateProductoDto,
-  ChangeStatusDto,
 } from './dto';
-import { Linea } from './entities/linea.entity';
-import { Grupo } from './entities/grupo.entity';
-import { Marca } from './entities/marca.entity';
-import { Producto } from './entities/producto.entity';
-import { Inventario } from 'src/inventario/entities/inventario.entity';
+import { ChangeStatusDto } from 'src/common/dto/change-status.dto';
+import { PrismaService } from 'src/prisma/prisma.service';
+import { PaginationQueryDto } from 'src/common/dto/pagination-query.dto';
+import { buildPaginationMeta } from 'src/common/utils/pagination.util';
 
 @Injectable()
 export class CatalogoService {
-  constructor(
-    @InjectRepository(Linea)
-    private readonly lineaRepository: Repository<Linea>,
-    @InjectRepository(Grupo)
-    private readonly grupoRepository: Repository<Grupo>,
-    @InjectRepository(Marca)
-    private readonly marcaRepository: Repository<Marca>,
-    @InjectRepository(Producto)
-    private readonly productoRepository: Repository<Producto>,
-    @InjectRepository(Inventario)
-    private readonly inventarioRepository: Repository<Inventario>,
-    private readonly dataSource: DataSource,
-  ) {}
+  constructor(private readonly prisma: PrismaService) { }
 
-  // === CRUD LÍNEAS ===
-  async createLinea(createLineaDto: CreateLineaDto): Promise<Linea> {
-    try {
-      const linea = this.lineaRepository.create(createLineaDto);
-      return await this.lineaRepository.save(linea);
-    } catch (error) {
-      if (error.code === '23505') {
-        throw new ConflictException('Ya existe una línea con ese nombre');
-      }
-      throw error;
-    }
-  }
-
-  async findAllLineas(): Promise<Linea[]> {
-    return await this.lineaRepository.find({
-      relations: ['grupos'],
-      order: { nombre: 'ASC' },
+  async createLinea(createLineaDto: CreateLineaDto) {
+    return this.prisma.linea.create({
+      data: {
+        nombre: createLineaDto.nombre,
+        estadoRegistro: createLineaDto.estadoRegistro,
+      },
+      include: {
+        grupos: true,
+      },
     });
   }
 
-  async findOneLinea(id: number): Promise<Linea> {
-    const linea = await this.lineaRepository.findOne({
-      where: { lineaId: id },
-      relations: ['grupos'],
+  async findAllLineas(query: PaginationQueryDto) {
+    const currentPage = query.page ?? 1;
+    const itemsPerPage = query.limit ?? 10;
+    const skip = (currentPage - 1) * itemsPerPage;
+
+    const [items, totalItems] = await Promise.all([
+      this.prisma.linea.findMany({
+        include: {
+          grupos: true,
+        },
+        orderBy: {
+          nombre: 'asc',
+        },
+        skip,
+        take: itemsPerPage,
+      }),
+      this.prisma.linea.count(),
+    ]);
+
+    return {
+      items,
+      meta: {
+        pagination: buildPaginationMeta({
+          totalItems,
+          itemCount: items.length,
+          itemsPerPage,
+          currentPage,
+        }),
+      },
+    };
+  }
+
+  async findOneLinea(id: number) {
+    const linea = await this.prisma.linea.findUnique({
+      where: {
+        lineaId: id,
+      },
+      include: {
+        grupos: true,
+      },
     });
 
     if (!linea) {
-      throw new NotFoundException(`Línea con ID ${id} no encontrada`);
+      throw new NotFoundException(`Linea con ID ${id} no encontrada`);
     }
 
     return linea;
   }
 
-  async updateLinea(
-    id: number,
-    updateLineaDto: UpdateLineaDto,
-  ): Promise<Linea> {
-    const linea = await this.findOneLinea(id);
+  async updateLinea(id: number, updateLineaDto: UpdateLineaDto) {
+    await this.findOneLinea(id);
 
-    try {
-      Object.assign(linea, updateLineaDto);
-      return await this.lineaRepository.save(linea);
-    } catch (error) {
-      if (error.code === '23505') {
-        throw new ConflictException('Ya existe una línea con ese nombre');
-      }
-      throw error;
-    }
-  }
-
-  async changeLineaStatus(
-    id: number,
-    changeStatusDto: ChangeStatusDto,
-  ): Promise<Linea> {
-    const linea = await this.lineaRepository.findOne({
-      where: { lineaId: id },
-      relations: ['grupos'],
-    });
-
-    if (!linea) {
-      throw new NotFoundException(`Línea con ID ${id} no encontrada`);
-    }
-
-    linea.estadoRegistro = changeStatusDto.estadoRegistro;
-    return await this.lineaRepository.save(linea);
-  }
-
-  // === CRUD GRUPOS ===
-  async createGrupo(createGrupoDto: CreateGrupoDto): Promise<Grupo> {
-    // Verificar que la línea existe
-    const linea = await this.findOneLinea(createGrupoDto.lineaId);
-
-    try {
-      const grupo = this.grupoRepository.create({
-        ...createGrupoDto,
-        linea,
-      });
-      return await this.grupoRepository.save(grupo);
-    } catch (error) {
-      throw error;
-    }
-  }
-
-  async findAllGrupos(): Promise<Grupo[]> {
-    return await this.grupoRepository.find({
-      relations: ['linea', 'productos'],
-      order: { nombre: 'ASC' },
-    });
-  }
-
-  async findGruposByLinea(lineaId: number): Promise<Grupo[]> {
-    return await this.grupoRepository.find({
+    return this.prisma.linea.update({
       where: {
-        estadoRegistro: true,
-        linea: { lineaId },
+        lineaId: id,
       },
-      relations: ['linea', 'productos'],
-      order: { nombre: 'ASC' },
+      data: updateLineaDto,
+      include: {
+        grupos: true,
+      },
     });
   }
 
-  async findOneGrupo(id: number): Promise<Grupo> {
-    const grupo = await this.grupoRepository.findOne({
-      where: { grupoId: id },
-      relations: ['linea', 'productos'],
+  async changeLineaStatus(id: number, changeStatusDto: ChangeStatusDto) {
+    await this.findOneLinea(id);
+
+    return this.prisma.linea.update({
+      where: {
+        lineaId: id,
+      },
+      data: {
+        estadoRegistro: changeStatusDto.estadoRegistro,
+      },
+      include: {
+        grupos: true,
+      },
+    });
+  }
+
+  async createGrupo(createGrupoDto: CreateGrupoDto) {
+    await this.findOneLinea(createGrupoDto.lineaId);
+
+    return this.prisma.grupo.create({
+      data: createGrupoDto,
+      include: {
+        linea: true,
+        productos: true,
+      },
+    });
+  }
+
+  async findAllGrupos(query: PaginationQueryDto) {
+    const currentPage = query.page ?? 1;
+    const itemsPerPage = query.limit ?? 10;
+    const skip = (currentPage - 1) * itemsPerPage;
+
+    const where: Prisma.GrupoWhereInput = {};
+
+    const [items, totalItems] = await Promise.all([
+      this.prisma.grupo.findMany({
+        where,
+        include: {
+          linea: true,
+          productos: {
+            include: {
+              inventario: true,
+            },
+          },
+        },
+        orderBy: {
+          nombre: 'asc',
+        },
+        skip,
+        take: itemsPerPage,
+      }),
+      this.prisma.grupo.count({ where }),
+    ]);
+
+    return {
+      items,
+      meta: {
+        pagination: buildPaginationMeta({
+          totalItems,
+          itemCount: items.length,
+          itemsPerPage,
+          currentPage,
+        }),
+      },
+    };
+  }
+
+  async findGruposByLinea(lineaId: number, query: PaginationQueryDto) {
+    const currentPage = query.page ?? 1;
+    const itemsPerPage = query.limit ?? 10;
+    const skip = (currentPage - 1) * itemsPerPage;
+
+    const where: Prisma.GrupoWhereInput = {
+      estadoRegistro: true,
+      lineaId,
+    };
+
+    const [items, totalItems] = await Promise.all([
+      this.prisma.grupo.findMany({
+        where,
+        include: {
+          linea: true,
+          productos: {
+            include: {
+              inventario: true,
+            },
+          },
+        },
+        orderBy: {
+          nombre: 'asc',
+        },
+        skip,
+        take: itemsPerPage,
+      }),
+      this.prisma.grupo.count({ where }),
+    ]);
+
+    return {
+      items,
+      meta: {
+        pagination: buildPaginationMeta({
+          totalItems,
+          itemCount: items.length,
+          itemsPerPage,
+          currentPage,
+        }),
+      },
+    };
+  }
+
+  async findOneGrupo(id: number) {
+    const grupo = await this.prisma.grupo.findUnique({
+      where: {
+        grupoId: id,
+      },
+      include: {
+        linea: true,
+        productos: {
+          include: {
+            inventario: true,
+          },
+        },
+      },
     });
 
     if (!grupo) {
@@ -153,73 +233,126 @@ export class CatalogoService {
     return grupo;
   }
 
-  async updateGrupo(
-    id: number,
-    updateGrupoDto: UpdateGrupoDto,
-  ): Promise<Grupo> {
-    const grupo = await this.findOneGrupo(id);
+  async updateGrupo(id: number, updateGrupoDto: UpdateGrupoDto) {
+    await this.findOneGrupo(id);
 
-    // Si se va a cambiar la línea, verificar que existe
-    if (
-      updateGrupoDto.lineaId &&
-      updateGrupoDto.lineaId !== grupo.linea.lineaId
-    ) {
-      const nuevaLinea = await this.findOneLinea(updateGrupoDto.lineaId);
-      grupo.linea = nuevaLinea;
+    if (updateGrupoDto.lineaId) {
+      await this.findOneLinea(updateGrupoDto.lineaId);
     }
 
-    try {
-      Object.assign(grupo, {
-        nombre: updateGrupoDto.nombre ?? grupo.nombre,
-        estadoRegistro: updateGrupoDto.estadoRegistro ?? grupo.estadoRegistro,
-      });
-      return await this.grupoRepository.save(grupo);
-    } catch (error) {
-      throw error;
-    }
-  }
-
-  async changeGrupoStatus(
-    id: number,
-    changeStatusDto: ChangeStatusDto,
-  ): Promise<Grupo> {
-    const grupo = await this.grupoRepository.findOne({
-      where: { grupoId: id },
-      relations: ['linea', 'productos'],
-    });
-
-    if (!grupo) {
-      throw new NotFoundException(`Grupo con ID ${id} no encontrado`);
-    }
-
-    grupo.estadoRegistro = changeStatusDto.estadoRegistro;
-    return await this.grupoRepository.save(grupo);
-  }
-
-  // === CRUD MARCAS ===
-  async createMarca(createMarcaDto: CreateMarcaDto): Promise<Marca> {
-    try {
-      const marca = this.marcaRepository.create(createMarcaDto);
-      return await this.marcaRepository.save(marca);
-    } catch (error) {
-      if (error.code === '23505') {
-        throw new ConflictException('Ya existe una marca con ese nombre');
-      }
-      throw error;
-    }
-  }
-
-  async findAllMarcas(): Promise<Marca[]> {
-    return await this.marcaRepository.find({
-      relations: ['productos'],
-      order: { nombre: 'ASC' },
+    return this.prisma.grupo.update({
+      where: {
+        grupoId: id,
+      },
+      data: updateGrupoDto,
+      include: {
+        linea: true,
+        productos: {
+          include: {
+            inventario: true,
+          },
+        },
+      },
     });
   }
 
-  async findOneMarca(id: number): Promise<Marca> {
-    const marca = await this.marcaRepository.findOne({
-      where: { marcaId: id },
-      relations: ['productos'],
+  async changeGrupoStatus(id: number, changeStatusDto: ChangeStatusDto) {
+    await this.findOneGrupo(id);
+
+    return this.prisma.grupo.update({
+      where: {
+        grupoId: id,
+      },
+      data: {
+        estadoRegistro: changeStatusDto.estadoRegistro,
+      },
+      include: {
+        linea: true,
+        productos: {
+          include: {
+            inventario: true,
+          },
+        },
+      },
+    });
+  }
+
+  async createMarca(createMarcaDto: CreateMarcaDto) {
+    return this.prisma.marca.create({
+      data: createMarcaDto,
+      include: {
+        productos: {
+          include: {
+            grupo: {
+              include: {
+                linea: true,
+              },
+            },
+            inventario: true,
+          },
+        },
+      },
+    });
+  }
+
+  async findAllMarcas(query: PaginationQueryDto) {
+    const currentPage = query.page ?? 1;
+    const itemsPerPage = query.limit ?? 10;
+    const skip = (currentPage - 1) * itemsPerPage;
+
+    const [items, totalItems] = await Promise.all([
+      this.prisma.marca.findMany({
+        include: {
+          productos: {
+            include: {
+              grupo: {
+                include: {
+                  linea: true,
+                },
+              },
+              inventario: true,
+            },
+          },
+        },
+        orderBy: {
+          nombre: 'asc',
+        },
+        skip,
+        take: itemsPerPage,
+      }),
+      this.prisma.marca.count(),
+    ]);
+
+    return {
+      items,
+      meta: {
+        pagination: buildPaginationMeta({
+          totalItems,
+          itemCount: items.length,
+          itemsPerPage,
+          currentPage,
+        }),
+      },
+    };
+  }
+
+  async findOneMarca(id: number) {
+    const marca = await this.prisma.marca.findUnique({
+      where: {
+        marcaId: id,
+      },
+      include: {
+        productos: {
+          include: {
+            grupo: {
+              include: {
+                linea: true,
+              },
+            },
+            inventario: true,
+          },
+        },
+      },
     });
 
     if (!marca) {
@@ -229,184 +362,320 @@ export class CatalogoService {
     return marca;
   }
 
-  async updateMarca(
-    id: number,
-    updateMarcaDto: UpdateMarcaDto,
-  ): Promise<Marca> {
-    const marca = await this.findOneMarca(id);
+  async updateMarca(id: number, updateMarcaDto: UpdateMarcaDto) {
+    await this.findOneMarca(id);
 
-    try {
-      Object.assign(marca, updateMarcaDto);
-      return await this.marcaRepository.save(marca);
-    } catch (error) {
-      if (error.code === '23505') {
-        throw new ConflictException('Ya existe una marca con ese nombre');
-      }
-      throw error;
-    }
-  }
-
-  async changeMarcaStatus(
-    id: number,
-    changeStatusDto: ChangeStatusDto,
-  ): Promise<Marca> {
-    const marca = await this.marcaRepository.findOne({
-      where: { marcaId: id },
-      relations: ['productos'],
+    return this.prisma.marca.update({
+      where: {
+        marcaId: id,
+      },
+      data: updateMarcaDto,
+      include: {
+        productos: {
+          include: {
+            grupo: {
+              include: {
+                linea: true,
+              },
+            },
+            inventario: true,
+          },
+        },
+      },
     });
-
-    if (!marca) {
-      throw new NotFoundException(`Marca con ID ${id} no encontrada`);
-    }
-
-    marca.estadoRegistro = changeStatusDto.estadoRegistro;
-    return await this.marcaRepository.save(marca);
   }
 
-  // === CRUD PRODUCTOS ===
-  async createProducto(
-    createProductoDto: CreateProductoDto,
-  ): Promise<Producto> {
+  async changeMarcaStatus(id: number, changeStatusDto: ChangeStatusDto) {
+    await this.findOneMarca(id);
+
+    return this.prisma.marca.update({
+      where: {
+        marcaId: id,
+      },
+      data: {
+        estadoRegistro: changeStatusDto.estadoRegistro,
+      },
+      include: {
+        productos: {
+          include: {
+            grupo: {
+              include: {
+                linea: true,
+              },
+            },
+            inventario: true,
+          },
+        },
+      },
+    });
+  }
+
+  async createProducto(createProductoDto: CreateProductoDto) {
     const {
       cantidadActual,
       cantidadMinima,
       grupoId,
       marcaId,
-      ...datosProducto
+      costoReferencial,
+      ...productoData
     } = createProductoDto;
 
-    // Verificar que el grupo y la marca existen
-    const grupo = await this.findOneGrupo(grupoId);
-    const marca = await this.findOneMarca(marcaId);
+    await this.findOneGrupo(grupoId);
+    await this.findOneMarca(marcaId);
 
-    return this.dataSource.transaction(async (manager) => {
-      try {
-        const nuevoInventario = this.inventarioRepository.create({
-          cantidadActual,
-          cantidadMinima,
-        });
+    if (cantidadActual !== undefined && cantidadActual < 0) {
+      throw new BadRequestException('La cantidad actual no puede ser negativa');
+    }
 
-        // 1. CREAR EL PRODUCTO (sin código)
-        const productoTemporal = manager.create(Producto, {
-          ...datosProducto,
-          grupo,
-          marca,
-          inventario: nuevoInventario,
-          codigo: null, // Explícitamente nulo
-        });
+    if (cantidadMinima !== undefined && cantidadMinima < 0) {
+      throw new BadRequestException('La cantidad minima no puede ser negativa');
+    }
 
-        // 2. GUARDAR (Paso 1: Insertar)
-        // Esto le pide a la BD que genere el 'productoId'
-        const productoGuardado = await manager.save(productoTemporal);
+    return this.prisma.$transaction(async (tx) => {
+      const productoCreado = await tx.producto.create({
+        data: {
+          ...productoData,
+          grupoId,
+          marcaId,
+          costoUnitario: costoReferencial ?? 0,
+          inventario: {
+            create: {
+              cantidadActual: cantidadActual ?? 0,
+              cantidadMinima: cantidadMinima ?? 0,
+            },
+          },
+        },
+      });
 
-        // 3. GENERAR EL CÓDIGO
-        // Usamos padStart(5, '0') para rellenar con ceros.
-        // Ej: 1 -> "00001", 123 -> "00123"
-        const prefijo = 'SLO-';
-        const nuevoCodigo = `${prefijo}${String(productoGuardado.productoId).padStart(5, '0')}`;
+      const codigo = this.buildProductoCode(productoCreado.productoId);
 
-        // 4. ACTUALIZAR EL PRODUCTO
-        productoGuardado.codigo = nuevoCodigo;
+      const producto = await tx.producto.update({
+        where: {
+          productoId: productoCreado.productoId,
+        },
+        data: {
+          codigo,
+        },
+        include: {
+          grupo: {
+            include: {
+              linea: true,
+            },
+          },
+          marca: true,
+          inventario: true,
+        },
+      });
 
-        // 5. GUARDAR (Paso 2: Actualizar)
-        // TypeORM es inteligente y solo hará un UPDATE del campo 'codigo'
-        return await manager.save(productoGuardado);
-      } catch (error) {
-        // El error '23505' (unique constraint) ahora es casi imposible
-        // que ocurra, pero es bueno mantener la validación.
-        if (error.code === '23505') {
-          throw new ConflictException(
-            'Error de concurrencia al generar el código. Intente de nuevo.',
-          );
-        }
-
-        throw new InternalServerErrorException('Error al crear el producto.');
-      }
+      return this.mapProductoResponse(producto);
     });
   }
 
-  async findAllProductos(): Promise<Producto[]> {
-    return await this.productoRepository.find({
-      relations: ['grupo', 'grupo.linea', 'marca', 'inventario'],
-      order: { nombre: 'ASC' },
-    });
+  async findAllProductos(query: PaginationQueryDto) {
+    const currentPage = query.page ?? 1;
+    const itemsPerPage = query.limit ?? 10;
+    const skip = (currentPage - 1) * itemsPerPage;
+
+    const [productos, totalItems] = await Promise.all([
+      this.prisma.producto.findMany({
+        include: {
+          grupo: {
+            include: {
+              linea: true,
+            },
+          },
+          marca: true,
+          inventario: true,
+        },
+        orderBy: {
+          nombre: 'asc',
+        },
+        skip,
+        take: itemsPerPage,
+      }),
+      this.prisma.producto.count(),
+    ]);
+
+    return {
+      items: productos.map((producto) => this.mapProductoResponse(producto)),
+      meta: {
+        pagination: buildPaginationMeta({
+          totalItems,
+          itemCount: productos.length,
+          itemsPerPage,
+          currentPage,
+        }),
+      },
+    };
   }
 
-  async findOneProducto(id: number): Promise<Producto> {
-    const producto = await this.productoRepository.findOne({
-      where: { productoId: id },
-      relations: ['grupo', 'grupo.linea', 'marca', 'inventario'],
+  async findOneProducto(id: number) {
+    const producto = await this.prisma.producto.findUnique({
+      where: {
+        productoId: id,
+      },
+      include: {
+        grupo: {
+          include: {
+            linea: true,
+          },
+        },
+        marca: true,
+        inventario: true,
+      },
     });
 
     if (!producto) {
       throw new NotFoundException(`Producto con ID ${id} no encontrado`);
     }
 
-    return producto;
+    return this.mapProductoResponse(producto);
   }
 
-  async updateProducto(
-    id: number,
-    updateProductoDto: UpdateProductoDto,
-  ): Promise<Producto> {
+  async updateProducto(id: number, updateProductoDto: UpdateProductoDto) {
     const producto = await this.findOneProducto(id);
 
-    const { cantidadActual, cantidadMinima, ...datosProducto } =
-      updateProductoDto;
+    const {
+      cantidadActual,
+      cantidadMinima,
+      costoReferencial,
+      grupoId,
+      marcaId,
+      ...productoData
+    } = updateProductoDto;
 
-    if (cantidadActual !== undefined) {
-      producto.inventario.cantidadActual = cantidadActual;
-    }
-    if (cantidadMinima !== undefined) {
-      producto.inventario.cantidadMinima = cantidadMinima;
-    }
-
-    if (
-      datosProducto.grupoId &&
-      datosProducto.grupoId !== producto.grupo.grupoId
-    ) {
-      producto.grupo = await this.findOneGrupo(datosProducto.grupoId);
-    }
-    if (
-      datosProducto.marcaId &&
-      datosProducto.marcaId !== producto.marca.marcaId
-    ) {
-      producto.marca = await this.findOneMarca(datosProducto.marcaId);
+    if (grupoId && grupoId !== producto.grupo.grupoId) {
+      await this.findOneGrupo(grupoId);
     }
 
-    try {
-      Object.assign(producto, {
-        // codigo: datosProducto.codigo ?? producto.codigo,
-        nombre: datosProducto.nombre ?? producto.nombre,
-        descripcion: datosProducto.descripcion ?? producto.descripcion,
-        precioVenta: datosProducto.precioVenta ?? producto.precioVenta,
-        costoReferencial:
-          datosProducto.costoReferencial ?? producto.costoReferencial,
-        estadoRegistro: datosProducto.estadoRegistro ?? producto.estadoRegistro,
+    if (marcaId && marcaId !== producto.marca.marcaId) {
+      await this.findOneMarca(marcaId);
+    }
+
+    if (cantidadActual !== undefined && cantidadActual < 0) {
+      throw new BadRequestException('La cantidad actual no puede ser negativa');
+    }
+
+    if (cantidadMinima !== undefined && cantidadMinima < 0) {
+      throw new BadRequestException('La cantidad minima no puede ser negativa');
+    }
+
+    return this.prisma.$transaction(async (tx) => {
+      await tx.producto.update({
+        where: {
+          productoId: id,
+        },
+        data: {
+          nombre: productoData.nombre,
+          descripcion: productoData.descripcion,
+          precioVenta: productoData.precioVenta,
+          costoUnitario: costoReferencial,
+          estadoRegistro: productoData.estadoRegistro,
+          grupoId,
+          marcaId,
+        },
       });
-      return await this.productoRepository.save(producto);
-    } catch (error) {
-      if (error.code === '23505') {
-        throw new ConflictException('Ya existe un producto con ese código');
+
+      if (cantidadActual !== undefined || cantidadMinima !== undefined) {
+        await tx.inventario.update({
+          where: {
+            productoId: id,
+          },
+          data: {
+            cantidadActual,
+            cantidadMinima,
+          },
+        });
       }
-      throw error;
-    }
+
+      const updatedProducto = await tx.producto.findUnique({
+        where: {
+          productoId: id,
+        },
+        include: {
+          grupo: {
+            include: {
+              linea: true,
+            },
+          },
+          marca: true,
+          inventario: true,
+        },
+      });
+
+      if (!updatedProducto) {
+        throw new InternalServerErrorException(
+          'No se pudo recuperar el producto actualizado',
+        );
+      }
+
+      return this.mapProductoResponse(updatedProducto);
+    });
   }
 
-  async changeProductoStatus(
-    id: number,
-    changeStatusDto: ChangeStatusDto,
-  ): Promise<Producto> {
-    const producto = await this.productoRepository.findOne({
-      where: { productoId: id },
-      relations: ['grupo', 'grupo.linea', 'marca'],
+  async changeProductoStatus(id: number, changeStatusDto: ChangeStatusDto) {
+    await this.findOneProducto(id);
+
+    const producto = await this.prisma.producto.update({
+      where: {
+        productoId: id,
+      },
+      data: {
+        estadoRegistro: changeStatusDto.estadoRegistro,
+      },
+      include: {
+        grupo: {
+          include: {
+            linea: true,
+          },
+        },
+        marca: true,
+        inventario: true,
+      },
     });
 
-    if (!producto) {
-      throw new NotFoundException(`Producto con ID ${id} no encontrado`);
-    }
+    return this.mapProductoResponse(producto);
+  }
 
-    producto.estadoRegistro = changeStatusDto.estadoRegistro;
-    return await this.productoRepository.save(producto);
+  private buildProductoCode(productoId: number): string {
+    return `SLO-${String(productoId).padStart(5, '0')}`;
+  }
+
+  private mapProductoResponse(
+    producto: Prisma.ProductoGetPayload<{
+      include: {
+        grupo: {
+          include: {
+            linea: true;
+          };
+        };
+        marca: true;
+        inventario: true;
+      };
+    }>,
+  ) {
+    return {
+      productoId: producto.productoId,
+      codigo: producto.codigo,
+      nombre: producto.nombre,
+      descripcion: producto.descripcion,
+      precioVenta: Number(producto.precioVenta),
+      costoReferencial: Number(producto.costoUnitario),
+      estadoRegistro: producto.estadoRegistro,
+      fechaCreacion: producto.fechaCreacion,
+      fechaModificacion: producto.fechaActualizacion,
+      grupo: {
+        ...producto.grupo,
+        fechaModificacion: producto.grupo.fechaActualizacion,
+      },
+      marca: {
+        ...producto.marca,
+        fechaModificacion: producto.marca.fechaActualizacion,
+      },
+      inventario: {
+        ...producto.inventario!,
+        fechaModificacion: producto.inventario!.fechaActualizacion,
+      },
+    };
   }
 }

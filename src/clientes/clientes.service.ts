@@ -3,47 +3,77 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
+import { Prisma } from 'generated/prisma/client';
+import { ChangeStatusDto } from 'src/common/dto/change-status.dto';
 import { CreateClienteDto } from './dto/create-cliente.dto';
 import { UpdateClienteDto } from './dto/update-cliente.dto';
-import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
-import { Cliente } from './entities/cliente.entity';
-import { Vendedor } from 'src/vendedores/entities/vendedor.entity';
-import { ChangeStatusDto } from './dto/change-status.dto';
+import { PrismaService } from 'src/prisma/prisma.service';
+import { PaginationQueryDto } from 'src/common/dto/pagination-query.dto';
+import { buildPaginationMeta } from 'src/common/utils/pagination.util';
 
 @Injectable()
 export class ClientesService {
-  constructor(
-    @InjectRepository(Cliente)
-    private readonly clienteRepository: Repository<Cliente>,
-    @InjectRepository(Vendedor)
-    private readonly vendedorRepository: Repository<Vendedor>,
-  ) {}
+  constructor(private readonly prisma: PrismaService) {}
 
-  async create(createClienteDto: CreateClienteDto): Promise<Cliente> {
+  async create(createClienteDto: CreateClienteDto) {
+    // Validar que el vendedor existe
+    const vendedor = await this.prisma.vendedor.findUnique({
+      where: { vendedorId: createClienteDto.vendedorId },
+    });
+    if (!vendedor) {
+      throw new NotFoundException(
+        `Vendedor con ID ${createClienteDto.vendedorId} no encontrado`,
+      );
+    }
+
     try {
-      const nuevoCliente = this.clienteRepository.create(createClienteDto);
-      return await this.clienteRepository.save(nuevoCliente);
+      return await this.prisma.cliente.create({
+        data: createClienteDto,
+        include: { vendedor: true },
+      });
     } catch (error) {
-      // Código '23505' es para violaciones de unique constraint en PostgreSQL
-      if (error.code === '23505') {
+      if (
+        error instanceof Prisma.PrismaClientKnownRequestError &&
+        error.code === 'P2002'
+      ) {
         throw new ConflictException('Ya existe un cliente con ese RUC o email');
       }
       throw error;
     }
   }
 
-  async findAll(): Promise<Cliente[]> {
-    return await this.clienteRepository.find({
-      relations: ['vendedor'],
-      order: { nombre: 'ASC' },
-    });
+  async findAll(query: PaginationQueryDto) {
+    const currentPage = query.page ?? 1;
+    const itemsPerPage = query.limit ?? 10;
+    const skip = (currentPage - 1) * itemsPerPage;
+
+    const [items, totalItems] = await Promise.all([
+      this.prisma.cliente.findMany({
+        include: { vendedor: true },
+        orderBy: { nombre: 'asc' },
+        skip,
+        take: itemsPerPage,
+      }),
+      this.prisma.cliente.count(),
+    ]);
+
+    return {
+      items,
+      meta: {
+        pagination: buildPaginationMeta({
+          totalItems,
+          itemCount: items.length,
+          itemsPerPage,
+          currentPage,
+        }),
+      },
+    };
   }
 
-  async findOne(id: number): Promise<Cliente> {
-    const cliente = await this.clienteRepository.findOne({
+  async findOne(id: number) {
+    const cliente = await this.prisma.cliente.findUnique({
       where: { clienteId: id },
-      relations: ['vendedor'],
+      include: { vendedor: true },
     });
 
     if (!cliente) {
@@ -53,61 +83,44 @@ export class ClientesService {
     return cliente;
   }
 
-  async update(
-    id: number,
-    updateClienteDto: UpdateClienteDto,
-  ): Promise<Cliente> {
-    // Reutilizamos findOne para manejar la excepción si no existe
-    const cliente = await this.findOne(id);
+  async update(id: number, updateClienteDto: UpdateClienteDto) {
+    await this.findOne(id);
 
-    // Si se está actualizando el vendedor, validar que exista
-    if (
-      updateClienteDto.vendedorId &&
-      updateClienteDto.vendedorId !== cliente.vendedorId
-    ) {
-      const vendedor = await this.vendedorRepository.findOne({
+    // Si se actualiza vendedorId, validar que exista
+    if (updateClienteDto.vendedorId) {
+      const vendedor = await this.prisma.vendedor.findUnique({
         where: { vendedorId: updateClienteDto.vendedorId },
       });
-
       if (!vendedor) {
         throw new NotFoundException(
           `Vendedor con ID ${updateClienteDto.vendedorId} no encontrado`,
         );
       }
-
-      cliente.vendedor = vendedor;
-      cliente.vendedorId = vendedor.vendedorId;
     }
 
     try {
-      // Actualizar los demás campos
-      Object.assign(cliente, {
-        nombre: updateClienteDto.nombre ?? cliente.nombre,
-        ruc: updateClienteDto.ruc ?? cliente.ruc,
-        direccion: updateClienteDto.direccion ?? cliente.direccion,
-        telefono: updateClienteDto.telefono ?? cliente.telefono,
-        email: updateClienteDto.email ?? cliente.email,
-        clasificacion: updateClienteDto.clasificacion ?? cliente.clasificacion,
-        departamento: updateClienteDto.departamento ?? cliente.departamento,
-        provincia: updateClienteDto.provincia ?? cliente.provincia,
-        distrito: updateClienteDto.distrito ?? cliente.distrito,
+      return await this.prisma.cliente.update({
+        where: { clienteId: id },
+        data: updateClienteDto,
+        include: { vendedor: true },
       });
-
-      return await this.clienteRepository.save(cliente);
     } catch (error) {
-      if (error.code === '23505') {
+      if (
+        error instanceof Prisma.PrismaClientKnownRequestError &&
+        error.code === 'P2002'
+      ) {
         throw new ConflictException('Ya existe un cliente con ese RUC o email');
       }
       throw error;
     }
   }
 
-  async changeStatus(
-    id: number,
-    changeStatusDto: ChangeStatusDto,
-  ): Promise<Cliente> {
-    const cliente = await this.findOne(id);
-    cliente.estadoRegistro = changeStatusDto.estadoRegistro;
-    return await this.clienteRepository.save(cliente);
+  async changeStatus(id: number, changeStatusDto: ChangeStatusDto) {
+    await this.findOne(id);
+    return await this.prisma.cliente.update({
+      where: { clienteId: id },
+      data: { estadoRegistro: changeStatusDto.estadoRegistro },
+      include: { vendedor: true },
+    });
   }
 }

@@ -6,8 +6,10 @@ import {
   ForbiddenException,
   Injectable,
 } from '@nestjs/common';
+import { PermisoModulo } from 'generated/prisma/client';
+import { Request } from 'express';
 import { Observable } from 'rxjs';
-import { Usuario } from '../entities/usuario.entity';
+import { AuthenticatedUser } from '../interfaces/authenticated-user.interface';
 import { META_PERMISSIONS } from '../decorators/permission-protected.decorator';
 
 @Injectable()
@@ -26,31 +28,22 @@ export class UserPermissionGuard implements CanActivate {
     if (!validPermissions) return true;
     if (validPermissions.length === 0) return true;
 
-    const req = context.switchToHttp().getRequest();
-    const user = req.user as Usuario;
+    const req = context
+      .switchToHttp()
+      .getRequest<Request & { user?: AuthenticatedUser }>();
+    const user = req.user;
 
     if (!user) throw new BadRequestException('User not found');
 
-    // Extraer todos los permisos únicos del usuario desde sus perfiles
-    const userPermissions = new Set<string>();
-    user.perfilesLink?.forEach((userProfile) => {
-      userProfile.perfil?.permisosLink?.forEach((permisoLink) => {
-        if (
-          permisoLink.permiso?.estadoRegistro &&
-          permisoLink.permiso?.keyPermiso
-        ) {
-          userPermissions.add(permisoLink.permiso.keyPermiso);
-        }
-      });
-    });
+    const userPermissions = new Set<PermisoModulo>(user.permisos);
 
     // Verificar si el usuario tiene al menos uno de los permisos requeridos
     for (const permission of validPermissions) {
-      if (userPermissions.has(permission)) return true;
+      if (userPermissions.has(permission as PermisoModulo)) return true;
     }
 
     throw new ForbiddenException(
-      `User ${user.nombres + ' ' + user.apellidoPaterno} needs one of these permissions: [${validPermissions}]`,
+      `User ${user.nombre + ' ' + user.apellido} needs one of these permissions: [${validPermissions.join(', ')}]`,
     );
   }
 }

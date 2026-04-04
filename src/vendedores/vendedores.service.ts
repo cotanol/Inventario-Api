@@ -1,38 +1,49 @@
-import {
-  Injectable,
-  NotFoundException,
-  BadRequestException,
-  InternalServerErrorException,
-} from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
-import { Vendedor } from './entities/vendedor.entity';
-import { CreateVendedorDto, UpdateVendedorDto, ChangeStatusDto } from './dto';
+import { Injectable, NotFoundException } from '@nestjs/common';
+import { ChangeStatusDto } from 'src/common/dto/change-status.dto';
+import { CreateVendedorDto, UpdateVendedorDto } from './dto';
+import { PrismaService } from 'src/prisma/prisma.service';
+import { PaginationQueryDto } from 'src/common/dto/pagination-query.dto';
+import { buildPaginationMeta } from 'src/common/utils/pagination.util';
 
 @Injectable()
 export class VendedoresService {
-  constructor(
-    @InjectRepository(Vendedor)
-    private readonly vendedorRepository: Repository<Vendedor>,
-  ) {}
+  constructor(private readonly prisma: PrismaService) {}
 
-  async create(createVendedorDto: CreateVendedorDto): Promise<Vendedor> {
-    try {
-      const vendedor = this.vendedorRepository.create(createVendedorDto);
-      return await this.vendedorRepository.save(vendedor);
-    } catch (error) {
-      this.handleDBError(error);
-    }
-  }
-
-  async findAll(): Promise<Vendedor[]> {
-    return await this.vendedorRepository.find({
-      order: { vendedorId: 'ASC' },
+  async create(createVendedorDto: CreateVendedorDto) {
+    return this.prisma.vendedor.create({
+      data: createVendedorDto,
     });
   }
 
-  async findOne(id: number): Promise<Vendedor> {
-    const vendedor = await this.vendedorRepository.findOne({
+  async findAll(query: PaginationQueryDto) {
+    const currentPage = query.page ?? 1;
+    const itemsPerPage = query.limit ?? 10;
+    const skip = (currentPage - 1) * itemsPerPage;
+
+    const [items, totalItems] = await Promise.all([
+      this.prisma.vendedor.findMany({
+        orderBy: { vendedorId: 'asc' },
+        skip,
+        take: itemsPerPage,
+      }),
+      this.prisma.vendedor.count(),
+    ]);
+
+    return {
+      items,
+      meta: {
+        pagination: buildPaginationMeta({
+          totalItems,
+          itemCount: items.length,
+          itemsPerPage,
+          currentPage,
+        }),
+      },
+    };
+  }
+
+  async findOne(id: number) {
+    const vendedor = await this.prisma.vendedor.findUnique({
       where: { vendedorId: id },
     });
 
@@ -43,18 +54,13 @@ export class VendedoresService {
     return vendedor;
   }
 
-  async update(
-    id: number,
-    updateVendedorDto: UpdateVendedorDto,
-  ): Promise<Vendedor> {
-    const vendedor = await this.findOne(id);
+  async update(id: number, updateVendedorDto: UpdateVendedorDto) {
+    await this.findOne(id);
 
-    try {
-      Object.assign(vendedor, updateVendedorDto);
-      return await this.vendedorRepository.save(vendedor);
-    } catch (error) {
-      this.handleDBError(error);
-    }
+    return this.prisma.vendedor.update({
+      where: { vendedorId: id },
+      data: updateVendedorDto,
+    });
   }
 
   async changeStatus(
@@ -62,28 +68,16 @@ export class VendedoresService {
     changeStatusDto: ChangeStatusDto,
   ): Promise<{ message: string }> {
     const { estadoRegistro } = changeStatusDto;
-    const result = await this.vendedorRepository.update(id, { estadoRegistro });
 
-    if (result.affected === 0) {
-      throw new NotFoundException(`Vendedor con ID ${id} no encontrado.`);
-    }
+    await this.findOne(id);
+
+    await this.prisma.vendedor.update({
+      where: { vendedorId: id },
+      data: { estadoRegistro },
+    });
 
     return {
       message: `Estado del vendedor actualizado a ${estadoRegistro ? 'activo' : 'inactivo'}.`,
     };
-  }
-
-  private handleDBError(error: any): never {
-    if (error.code === '23505') {
-      // Unique constraint violation
-      throw new BadRequestException(
-        error.detail || 'Ya existe un vendedor con ese DNI o correo.',
-      );
-    }
-
-    console.error(error);
-    throw new InternalServerErrorException(
-      'Error inesperado. Revisa los logs del servidor.',
-    );
   }
 }

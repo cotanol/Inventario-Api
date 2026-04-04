@@ -35,10 +35,8 @@ export class PrinterService {
   ): Promise<string> {
     return new Promise((resolve, reject) => {
       try {
-        // Directorio donde se guardará el PDF
-        // __dirname está en dist/printer/ cuando se compila
-        // Subimos 2 niveles: dist/printer/ -> dist/ -> backend/
-        const pdfDir = path.join(__dirname, '..', '..', 'public', 'pdfs');
+        // Directorio donde se guardará el PDF siempre en la raiz del proyecto
+        const pdfDir = path.join(process.cwd(), 'public', 'pdfs');
 
         // Crear el directorio si no existe
         if (!fs.existsSync(pdfDir)) {

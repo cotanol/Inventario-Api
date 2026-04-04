@@ -1,18 +1,13 @@
 import { Module } from '@nestjs/common';
 import { InventarioService } from './inventario.service';
 import { InventarioController } from './inventario.controller';
-import { TypeOrmModule } from '@nestjs/typeorm';
-import { Inventario } from './entities/inventario.entity';
-import { MovimientoInventario } from './entities/movimiento-inventario.entity';
 import { AuthModule } from 'src/auth/auth.module';
+import { PrismaModule } from 'src/prisma/prisma.module';
 
 @Module({
-  imports: [
-    TypeOrmModule.forFeature([Inventario, MovimientoInventario]),
-    AuthModule,
-  ],
+  imports: [PrismaModule, AuthModule],
   controllers: [InventarioController],
   providers: [InventarioService],
-  exports: [TypeOrmModule, InventarioService],
+  exports: [InventarioService],
 })
 export class InventarioModule {}

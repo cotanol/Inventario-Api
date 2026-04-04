@@ -21,7 +21,6 @@ export class ReportsController {
     const pdfUrl = await this.reportsService.saveBillReport();
 
     return {
-      ok: true,
       message: 'PDF generado exitosamente',
       url: pdfUrl,
       fullUrl: `${process.env.HOST_API || 'http://localhost:6040'}${pdfUrl}`,

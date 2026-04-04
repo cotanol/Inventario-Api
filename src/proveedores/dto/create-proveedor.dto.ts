@@ -10,7 +10,7 @@ export class CreateProveedorDto {
   @IsString()
   @IsNotEmpty()
   @MaxLength(100)
-  nombreEmpresa: string;
+  nombreEmpresa!: string;
 
   @IsString()
   @IsOptional()
@@ -30,7 +30,7 @@ export class CreateProveedorDto {
   @IsString()
   @IsNotEmpty()
   @MaxLength(20)
-  numeroIdentificacionFiscal: string;
+  numeroIdentificacionFiscal!: string;
 
   @IsString()
   @IsOptional()
@@ -39,5 +39,5 @@ export class CreateProveedorDto {
   @IsString()
   @IsNotEmpty()
   @MaxLength(50)
-  pais: string;
+  pais!: string;
 }

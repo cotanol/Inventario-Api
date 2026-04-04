@@ -4,10 +4,8 @@ import {
   MinLength,
   MaxLength,
   Matches,
-  IsOptional,
-  IsArray,
   IsInt,
-  ArrayMinSize,
+  IsPositive,
 } from 'class-validator';
 import { Type } from 'class-transformer';
 import { ApiProperty } from '@nestjs/swagger';
@@ -19,7 +17,7 @@ export class CreateUserDto {
   })
   @IsString()
   @IsEmail()
-  correoElectronico: string;
+  correoElectronico!: string;
 
   @ApiProperty({
     description:
@@ -33,61 +31,30 @@ export class CreateUserDto {
     message:
       'The password must have a Uppercase, lowercase letter and a number',
   })
-  clave: string;
+  clave!: string;
 
   @ApiProperty({
-    description: 'Nombres completos del usuario',
+    description: 'Nombre del usuario',
     example: 'Juan Alberto',
   })
   @IsString()
   @MinLength(1)
-  nombres: string;
+  nombre!: string;
 
   @ApiProperty({
-    description: 'Apellido paterno del usuario',
-    example: 'Pérez',
+    description: 'Apellidos del usuario',
+    example: 'Perez Gomez',
   })
   @IsString()
   @MinLength(1)
-  apellidoPaterno: string;
+  apellido!: string;
 
   @ApiProperty({
-    description: 'Documento Nacional de Identidad del usuario',
-    example: '71234567',
+    description: 'ID del rol a asignar al usuario.',
+    example: 1,
   })
-  @IsString()
-  @MinLength(8)
-  @MaxLength(15)
-  dni: string;
-
-  @ApiProperty({
-    description: 'Apellido materno del usuario (opcional)',
-    example: 'Gómez',
-    required: false,
-  })
-  @IsOptional()
-  @IsString()
-  @MinLength(1)
-  apellidoMaterno?: string;
-
-  @ApiProperty({
-    description: 'Número de celular del usuario (opcional)',
-    example: '987654321',
-    required: false,
-  })
-  @IsOptional()
-  @IsString()
-  @MinLength(1)
-  celular?: string;
-
-  @ApiProperty({
-    description:
-      'Array de IDs de los perfiles a asignar al usuario. Se requiere al menos uno.',
-    example: [1, 2],
-  })
-  @IsArray()
-  @IsInt({ each: true })
+  @IsInt()
   @Type(() => Number)
-  @ArrayMinSize(1)
-  perfilesIds: number[];
+  @IsPositive()
+  rolId!: number;
 }

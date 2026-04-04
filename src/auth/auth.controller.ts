@@ -1,30 +1,33 @@
 import {
+  Body,
   Controller,
   Get,
-  Post,
-  Body,
   Param,
   ParseIntPipe,
   Patch,
+  Post,
+  Query,
 } from '@nestjs/common';
-import { AuthService } from './auth.service';
-import { CreateUserDto, LoginUserDto } from './dto';
+import { ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
+import { PermisoModulo } from 'generated/prisma/client';
 
-import { GetUser } from './decorators/get-user.decorator';
-import { Usuario } from './entities/usuario.entity';
-
-import { ValidPermissions } from './interfaces/valid-permissions.interface';
-import { RequirePermissions } from './decorators/require-permissions.decorator';
+import { ChangeStatusDto } from 'src/common/dto/change-status.dto';
+import { PaginationQueryDto } from 'src/common/dto/pagination-query.dto';
 import {
-  ApiBearerAuth,
-  ApiOperation,
-  ApiResponse,
-  ApiTags,
-} from '@nestjs/swagger';
-import { ChangeStatusDto } from './dto/change-status.dto';
+  ApiPaginationQueryDocs,
+  ApiStandardItemResponse,
+  ApiStandardListResponse,
+} from 'src/common/swagger/api-standard-response.decorator';
+import { swaggerExamples } from 'src/common/swagger/examples';
+
+import { AuthService } from './auth.service';
+import { GetUser } from './decorators/get-user.decorator';
+import { RequirePermissions } from './decorators/require-permissions.decorator';
+import { CreateRolDto } from './dto/create-rol.dto';
+import { CreateUserDto, LoginUserDto } from './dto';
+import { UpdateRolDto } from './dto/update-rol.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
-import { UpdatePerfilDto } from './dto/update-perfil.dto';
-import { CreatePerfilDto } from './dto/create-perfil.dto';
+import { AuthenticatedUser } from './interfaces/authenticated-user.interface';
 
 @ApiTags('Auth')
 @Controller('auth')
@@ -34,23 +37,13 @@ export class AuthController {
   @Post('register')
   @ApiOperation({
     summary: 'Registrar un nuevo usuario',
-    description:
-      'Este endpoint permite a un administrador crear un nuevo usuario en el sistema. La contraseña debe cumplir con los requisitos de seguridad.',
+    description: 'Crea un nuevo usuario en el sistema.',
   })
-  @ApiBearerAuth()
-  @ApiResponse({
-    status: 201,
-    description: 'Usuario creado exitosamente. Devuelve el usuario y el token.',
+  @ApiResponse({ status: 201, description: 'Usuario creado exitosamente.' })
+  @RequirePermissions(PermisoModulo.USUARIOS)
+  @ApiStandardItemResponse('Usuario creado correctamente', 'created', {
+    dataExample: swaggerExamples.authSession,
   })
-  @ApiResponse({
-    status: 400,
-    description: 'Bad Request: La información proporcionada es inválida.',
-  })
-  @ApiResponse({
-    status: 403,
-    description: 'Forbidden: No tienes el permiso CREAR_USUARIO.',
-  })
-  @RequirePermissions(ValidPermissions.CREAR_USUARIO)
   async register(@Body() createUserDto: CreateUserDto) {
     return this.authService.create(createUserDto);
   }
@@ -58,16 +51,12 @@ export class AuthController {
   @Post('login')
   @ApiOperation({
     summary: 'Iniciar sesión',
-    description:
-      'Autentica a un usuario con su correo electrónico y contraseña. Si las credenciales son válidas, devuelve los datos del usuario y un JSON Web Token (JWT).',
+    description: 'Autentica un usuario y devuelve token JWT.',
   })
-  @ApiResponse({
-    status: 201,
-    description: 'Autenticación exitosa. Devuelve el usuario y el token.',
-  })
-  @ApiResponse({
-    status: 401,
-    description: 'Unauthorized: Credenciales inválidas.',
+  @ApiResponse({ status: 201, description: 'Autenticación exitosa.' })
+  @ApiResponse({ status: 401, description: 'Credenciales inválidas.' })
+  @ApiStandardItemResponse('Sesion iniciada correctamente', 'ok', {
+    dataExample: swaggerExamples.authSession,
   })
   async login(@Body() loginUserDto: LoginUserDto) {
     return this.authService.login(loginUserDto);
@@ -76,98 +65,48 @@ export class AuthController {
   @Get('check-status')
   @ApiOperation({
     summary: 'Verificar estado de autenticación',
-    description:
-      'Permite validar el token JWT actual. Si el token es válido, devuelve los datos del usuario y un nuevo token refrescado.',
-  })
-  @ApiBearerAuth()
-  @ApiResponse({
-    status: 200,
-    description: 'Token válido. Devuelve el usuario y un nuevo token.',
-  })
-  @ApiResponse({
-    status: 403,
-    description: 'Forbidden: El token no es válido o ha expirado.',
+    description: 'Valida el token JWT actual.',
   })
   @RequirePermissions()
-  checkAuthStatus(@GetUser() user: Usuario) {
+  @ApiStandardItemResponse(
+    'Estado de autenticacion validado correctamente',
+    'ok',
+    {
+      dataExample: swaggerExamples.authSession,
+    },
+  )
+  checkAuthStatus(@GetUser() user: AuthenticatedUser) {
     return this.authService.checkAuthStatus(user);
   }
 
-  //  MENÚ DINÁMICO ---
-  @Get('menu')
-  @ApiOperation({
-    summary: 'Obtener el menú dinámico del usuario',
-    description:
-      'Devuelve la estructura jerárquica del menú de navegación basada en los perfiles asignados al usuario autenticado.',
-  })
-  @ApiBearerAuth()
-  @ApiResponse({ status: 200, description: 'Menú generado exitosamente.' })
-  @ApiResponse({
-    status: 403,
-    description: 'Forbidden: El token no es válido o ha expirado.',
-  })
-  @RequirePermissions() // Solo requiere autenticación
-  getMenu(@GetUser() user: Usuario) {
-    return this.authService.getMenuForUser(user);
+  @Get('roles')
+  @RequirePermissions(PermisoModulo.ROLES)
+  @ApiPaginationQueryDocs()
+  @ApiStandardListResponse('Lista paginada de roles', swaggerExamples.role)
+  findAllRoles(@Query() paginationQuery: PaginationQueryDto) {
+    return this.authService.findAllRoles(paginationQuery);
   }
 
-  // Listar todos los perfiles/roles ---
-  @Get('perfiles')
-  @ApiOperation({
-    summary: 'Listar todos los perfiles/roles disponibles',
-    description:
-      'Devuelve una lista de todos los perfiles que se pueden asignar a los usuarios. Requiere rol de administrador.',
-  })
-  @ApiBearerAuth()
-  @ApiResponse({ status: 200, description: 'Lista de perfiles obtenida.' })
-  @ApiResponse({
-    status: 403,
-    description: 'Forbidden: No tienes el permiso VER_PERFILES.',
-  })
-  @RequirePermissions(ValidPermissions.VER_PERFILES)
-  findAllPerfiles() {
-    return this.authService.findAllPerfiles();
-  }
-
-  //  Listar todos los usuarios ---
   @Get('usuarios')
-  @ApiOperation({
-    summary: 'Listar todos los usuarios del sistema',
-    description:
-      'Devuelve una lista de todos los usuarios registrados, incluyendo sus perfiles. Requiere rol de administrador.',
-  })
-  @ApiBearerAuth()
-  @ApiResponse({ status: 200, description: 'Lista de usuarios obtenida.' })
-  @ApiResponse({
-    status: 403,
-    description: 'Forbidden: No tienes el permiso VER_USUARIOS.',
-  })
-  @RequirePermissions(ValidPermissions.VER_USUARIOS)
-  findAllUsers() {
-    return this.authService.findAllUsers();
+  @RequirePermissions(PermisoModulo.USUARIOS)
+  @ApiPaginationQueryDocs()
+  @ApiStandardListResponse(
+    'Lista paginada de usuarios',
+    swaggerExamples.authUser,
+  )
+  findAllUsers(@Query() paginationQuery: PaginationQueryDto) {
+    return this.authService.findAllUsers(paginationQuery);
   }
 
   @Patch('change-status/:id')
-  @ApiOperation({
-    summary: 'Cambiar el estado de registro de un usuario',
-    description:
-      'Permite activar o desactivar la cuenta de un usuario existente. Requiere rol de administrador.',
-  })
-  @ApiBearerAuth()
-  @ApiResponse({ status: 200, description: 'Estado del usuario actualizado.' })
-  @ApiResponse({
-    status: 400,
-    description: 'Bad Request: El estado proporcionado es inválido.',
-  })
-  @ApiResponse({
-    status: 403,
-    description: 'Forbidden: No tienes permisos de administrador.',
-  })
-  @ApiResponse({
-    status: 404,
-    description: 'Not Found: Usuario no encontrado.',
-  })
-  @RequirePermissions(ValidPermissions.EDITAR_USUARIO)
+  @RequirePermissions(PermisoModulo.USUARIOS)
+  @ApiStandardItemResponse(
+    'Estado de usuario actualizado correctamente',
+    'ok',
+    {
+      dataExample: swaggerExamples.statusMessage,
+    },
+  )
   changeStatus(
     @Param('id', ParseIntPipe) id: number,
     @Body() changeStatusDto: ChangeStatusDto,
@@ -176,53 +115,19 @@ export class AuthController {
   }
 
   @Get('user/:id')
-  @ApiOperation({
-    summary: 'Obtener información de un usuario por ID',
-    description:
-      'Permite obtener los datos de un usuario específico utilizando su ID. Requiere rol de administrador.',
+  @RequirePermissions(PermisoModulo.USUARIOS)
+  @ApiStandardItemResponse('Usuario obtenido correctamente', 'ok', {
+    dataExample: swaggerExamples.authUser,
   })
-  @ApiBearerAuth()
-  @ApiResponse({
-    status: 200,
-    description: 'Usuario encontrado y datos devueltos correctamente.',
-  })
-  @ApiResponse({
-    status: 403,
-    description: 'Forbidden: No tienes permisos de administrador.',
-  })
-  @ApiResponse({
-    status: 404,
-    description: 'Not Found: Usuario no encontrado.',
-  })
-  @RequirePermissions(ValidPermissions.VER_USUARIOS)
   getUserById(@Param('id', ParseIntPipe) id: number) {
     return this.authService.findUserById(id);
   }
 
   @Patch('update-user/:id')
-  @ApiOperation({
-    summary: 'Actualizar la información de un usuario',
-    description:
-      'Permite modificar los datos de un usuario existente, incluyendo sus perfiles. Requiere rol de administrador.',
+  @RequirePermissions(PermisoModulo.USUARIOS)
+  @ApiStandardItemResponse('Usuario actualizado correctamente', 'ok', {
+    dataExample: swaggerExamples.authUser,
   })
-  @ApiBearerAuth()
-  @ApiResponse({
-    status: 200,
-    description: 'Usuario actualizado correctamente.',
-  })
-  @ApiResponse({
-    status: 400,
-    description: 'Bad Request: La información proporcionada es inválida.',
-  })
-  @ApiResponse({
-    status: 403,
-    description: 'Forbidden: No tienes permisos de administrador.',
-  })
-  @ApiResponse({
-    status: 404,
-    description: 'Not Found: Usuario no encontrado.',
-  })
-  @RequirePermissions(ValidPermissions.EDITAR_USUARIO)
   update(
     @Param('id', ParseIntPipe) id: number,
     @Body() updateUserDto: UpdateUserDto,
@@ -230,39 +135,45 @@ export class AuthController {
     return this.authService.updateUser(id, updateUserDto);
   }
 
-  @Get('permisos')
-  @RequirePermissions(ValidPermissions.VER_PERFILES)
-  findAllPermisos() {
-    return this.authService.findAllPermisos();
+  @Post('roles')
+  @RequirePermissions(PermisoModulo.ROLES)
+  @ApiStandardItemResponse('Rol creado correctamente', 'created', {
+    dataExample: swaggerExamples.role,
+  })
+  createRole(@Body() createRolDto: CreateRolDto) {
+    return this.authService.createRole(createRolDto);
   }
 
-  @Post('perfiles')
-  @RequirePermissions(ValidPermissions.CREAR_PERFIL)
-  createPerfil(@Body() createPerfilDto: CreatePerfilDto) {
-    return this.authService.createPerfil(createPerfilDto);
+  @Get('roles/:id')
+  @RequirePermissions(PermisoModulo.ROLES)
+  @ApiStandardItemResponse('Rol obtenido correctamente', 'ok', {
+    dataExample: swaggerExamples.role,
+  })
+  findOneRole(@Param('id', ParseIntPipe) id: number) {
+    return this.authService.findOneRole(id);
   }
 
-  @Get('perfiles/:id')
-  @RequirePermissions(ValidPermissions.VER_PERFILES)
-  findOnePerfil(@Param('id', ParseIntPipe) id: number) {
-    return this.authService.findOnePerfil(id);
-  }
-
-  @Patch('perfiles/:id')
-  @RequirePermissions(ValidPermissions.EDITAR_PERFIL)
-  updatePerfil(
+  @Patch('roles/:id')
+  @RequirePermissions(PermisoModulo.ROLES)
+  @ApiStandardItemResponse('Rol actualizado correctamente', 'ok', {
+    dataExample: swaggerExamples.role,
+  })
+  updateRole(
     @Param('id', ParseIntPipe) id: number,
-    @Body() updatePerfilDto: UpdatePerfilDto,
+    @Body() updateRolDto: UpdateRolDto,
   ) {
-    return this.authService.updatePerfil(id, updatePerfilDto);
+    return this.authService.updateRole(id, updateRolDto);
   }
 
-  @Patch('perfiles/:id/change-status')
-  @RequirePermissions(ValidPermissions.EDITAR_PERFIL)
-  changeStatusPerfil(
+  @Patch('roles/:id/change-status')
+  @RequirePermissions(PermisoModulo.ROLES)
+  @ApiStandardItemResponse('Estado de rol actualizado correctamente', 'ok', {
+    dataExample: swaggerExamples.statusMessage,
+  })
+  changeStatusRole(
     @Param('id', ParseIntPipe) id: number,
     @Body() changeStatusDto: ChangeStatusDto,
   ) {
-    return this.authService.changeStatusPerfil(id, changeStatusDto);
+    return this.authService.changeStatusRole(id, changeStatusDto);
   }
 }

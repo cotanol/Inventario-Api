@@ -1,0 +1,25 @@
+services:
+  inventario-api:
+    container_name: inventario-api-backend
+    build:
+      context: .
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    ports:
+      # Solo accesible desde localhost (para Nginx/reverse proxy)
+      - '127.0.0.1:${API_PORT:-6040}:4000'
+    env_file:
+      - .env
+    networks:
+      - inventario-db-network
+    volumes:
+      - inventario-pdfs-data:/app/public/pdfs
+
+networks:
+  inventario-db-network:
+    name: ${EXTERNAL_NETWORK:-my-database_default}
+    external: true
+
+volumes:
+  inventario-pdfs-data:
+    name: inventario-pdfs-data

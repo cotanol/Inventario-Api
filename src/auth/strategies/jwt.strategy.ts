@@ -1,40 +1,66 @@
-import { PassportStrategy } from '@nestjs/passport';
-import { Usuario } from '../entities/usuario.entity';
-import { ExtractJwt, Strategy } from 'passport-jwt';
-import { JwtPayLoad } from '../interfaces/jwt-payload.interface';
-import { UnauthorizedException } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { Injectable, UnauthorizedException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import { PassportStrategy } from '@nestjs/passport';
+import { Request } from 'express';
+import { Strategy } from 'passport-jwt';
 
+import { PrismaService } from 'src/prisma/prisma.service';
+
+import { JwtPayLoad } from '../interfaces/jwt-payload.interface';
+
+@Injectable()
 export class JwtStrategy extends PassportStrategy(Strategy) {
   constructor(
-    @InjectRepository(Usuario)
-    private readonly userRepository: Repository<Usuario>,
+    private readonly prisma: PrismaService,
     configService: ConfigService,
   ) {
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-call
     super({
-      secretOrKey: configService.get<string>('JWT_SECRET'),
-      jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),
+      secretOrKey: configService.getOrThrow<string>('JWT_SECRET'),
+      jwtFromRequest: (request: Request): string | null => {
+        const authorization = request.headers.authorization;
+
+        if (!authorization) {
+          return null;
+        }
+
+        const [scheme, token] = authorization.split(' ');
+
+        if (scheme?.toLowerCase() !== 'bearer' || !token) {
+          return null;
+        }
+
+        return token;
+      },
     });
   }
-  async validate(payload: JwtPayLoad): Promise<Usuario> {
+
+  async validate(payload: JwtPayLoad) {
     const { usuarioId } = payload;
 
-    const user = await this.userRepository.findOne({
+    const user = await this.prisma.usuario.findUnique({
       where: { usuarioId },
-      relations: [
-        'perfilesLink',
-        'perfilesLink.perfil',
-        'perfilesLink.perfil.permisosLink',
-        'perfilesLink.perfil.permisosLink.permiso',
-      ],
+      include: { rol: true },
     });
 
-    if (!user) throw new UnauthorizedException('Token not valid');
+    if (!user) {
+      throw new UnauthorizedException('Token not valid');
+    }
 
-    if (!user.estadoRegistro) throw new UnauthorizedException('User inactive');
+    if (!user.estadoRegistro) {
+      throw new UnauthorizedException('User inactive');
+    }
 
-    return user;
+    return {
+      usuarioId: user.usuarioId,
+      nombre: user.nombre,
+      apellido: user.apellido,
+      correoElectronico: user.correoElectronico,
+      estadoRegistro: user.estadoRegistro,
+      fechaCreacion: user.fechaCreacion,
+      fechaModificacion: user.fechaActualizacion,
+      rol: user.rol.nombre,
+      permisos: user.rol.permisos,
+    };
   }
 }
