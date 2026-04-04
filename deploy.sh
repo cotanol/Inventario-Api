@@ -2,7 +2,7 @@
 # Detener el script si hay algún error (Muy importante)
 set -e
 
-BRANCH="${BRANCH:-migrate/prisma}"
+BRANCH="master"
 SERVICE="inventario-api"
 
 echo "Desplegando Inventario API..."
