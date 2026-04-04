@@ -22,7 +22,7 @@ import { PrismaModule } from './prisma/prisma.module';
     }),
 
     ServeStaticModule.forRoot({
-      rootPath: join(__dirname, '..', 'public'),
+      rootPath: join(process.cwd(), 'public'),
       serveRoot: '/',
     }),
 
