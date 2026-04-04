@@ -40,47 +40,43 @@ export class ComprasService {
     const { totalCompra, detallesValidados } =
       await this.validateAndBuildDetalles(createCompraDto.detalles);
 
-    try {
-      const compra = await this.prisma.$transaction(async (tx) => {
-        const createdCompra = await tx.compra.create({
-          data: {
-            proveedorId: createCompraDto.proveedorId,
-            fechaOrden: new Date(createCompraDto.fechaOrden),
-            fechaEntregaEstimada: createCompraDto.fechaLlegadaEstimada
-              ? new Date(createCompraDto.fechaLlegadaEstimada)
-              : undefined,
-            estado: createCompraDto.estadoCompra ?? 'BORRADOR',
-            total: new Prisma.Decimal(totalCompra),
-          },
-        });
-
-        await tx.detalleCompra.createMany({
-          data: detallesValidados.map((detalle) => ({
-            compraId: createdCompra.compraId,
-            productoId: detalle.productoId,
-            cantidadSolicitada: detalle.cantidadSolicitada,
-            cantidadRecibida: 0,
-            costoUnitario: new Prisma.Decimal(detalle.costoUnitario),
-            subtotal: new Prisma.Decimal(detalle.subtotal),
-          })),
-        });
-
-        return tx.compra.findUnique({
-          where: { compraId: createdCompra.compraId },
-          include: COMPRA_INCLUDE,
-        });
+    const compra = await this.prisma.$transaction(async (tx) => {
+      const createdCompra = await tx.compra.create({
+        data: {
+          proveedorId: createCompraDto.proveedorId,
+          fechaOrden: new Date(createCompraDto.fechaOrden),
+          fechaEntregaEstimada: createCompraDto.fechaLlegadaEstimada
+            ? new Date(createCompraDto.fechaLlegadaEstimada)
+            : undefined,
+          estado: createCompraDto.estadoCompra ?? 'BORRADOR',
+          total: new Prisma.Decimal(totalCompra),
+        },
       });
 
-      if (!compra) {
-        throw new InternalServerErrorException(
-          'No se pudo recuperar la compra creada',
-        );
-      }
+      await tx.detalleCompra.createMany({
+        data: detallesValidados.map((detalle) => ({
+          compraId: createdCompra.compraId,
+          productoId: detalle.productoId,
+          cantidadSolicitada: detalle.cantidadSolicitada,
+          cantidadRecibida: 0,
+          costoUnitario: new Prisma.Decimal(detalle.costoUnitario),
+          subtotal: new Prisma.Decimal(detalle.subtotal),
+        })),
+      });
 
-      return this.mapCompraResponse(compra);
-    } catch (error) {
-      this.handleDBError(error);
+      return tx.compra.findUnique({
+        where: { compraId: createdCompra.compraId },
+        include: COMPRA_INCLUDE,
+      });
+    });
+
+    if (!compra) {
+      throw new InternalServerErrorException(
+        'No se pudo recuperar la compra creada',
+      );
     }
+
+    return this.mapCompraResponse(compra);
   }
 
   async findAll(query: PaginationQueryDto) {
@@ -186,61 +182,55 @@ export class ComprasService {
       totalCompra = detallesResult.totalCompra;
     }
 
-    try {
-      const compraActualizada = await this.prisma.$transaction(async (tx) => {
-        await tx.compra.update({
-          where: { compraId: id },
-          data: {
-            proveedorId: updateCompraDto.proveedorId,
-            fechaOrden: updateCompraDto.fechaOrden
-              ? new Date(updateCompraDto.fechaOrden)
+    const compraActualizada = await this.prisma.$transaction(async (tx) => {
+      await tx.compra.update({
+        where: { compraId: id },
+        data: {
+          proveedorId: updateCompraDto.proveedorId,
+          fechaOrden: updateCompraDto.fechaOrden
+            ? new Date(updateCompraDto.fechaOrden)
+            : undefined,
+          fechaEntregaEstimada:
+            updateCompraDto.fechaLlegadaEstimada !== undefined
+              ? updateCompraDto.fechaLlegadaEstimada
+                ? new Date(updateCompraDto.fechaLlegadaEstimada)
+                : null
               : undefined,
-            fechaEntregaEstimada:
-              updateCompraDto.fechaLlegadaEstimada !== undefined
-                ? updateCompraDto.fechaLlegadaEstimada
-                  ? new Date(updateCompraDto.fechaLlegadaEstimada)
-                  : null
-                : undefined,
-            total:
-              totalCompra !== null
-                ? new Prisma.Decimal(totalCompra)
-                : undefined,
-          },
-        });
-
-        if (detallesValidados) {
-          await tx.detalleCompra.deleteMany({
-            where: { compraId: id },
-          });
-
-          await tx.detalleCompra.createMany({
-            data: detallesValidados.map((detalle) => ({
-              compraId: id,
-              productoId: detalle.productoId,
-              cantidadSolicitada: detalle.cantidadSolicitada,
-              cantidadRecibida: 0,
-              costoUnitario: new Prisma.Decimal(detalle.costoUnitario),
-              subtotal: new Prisma.Decimal(detalle.subtotal),
-            })),
-          });
-        }
-
-        return tx.compra.findUnique({
-          where: { compraId: id },
-          include: COMPRA_INCLUDE,
-        });
+          total:
+            totalCompra !== null ? new Prisma.Decimal(totalCompra) : undefined,
+        },
       });
 
-      if (!compraActualizada) {
-        throw new InternalServerErrorException(
-          'No se pudo recuperar la compra actualizada',
-        );
+      if (detallesValidados) {
+        await tx.detalleCompra.deleteMany({
+          where: { compraId: id },
+        });
+
+        await tx.detalleCompra.createMany({
+          data: detallesValidados.map((detalle) => ({
+            compraId: id,
+            productoId: detalle.productoId,
+            cantidadSolicitada: detalle.cantidadSolicitada,
+            cantidadRecibida: 0,
+            costoUnitario: new Prisma.Decimal(detalle.costoUnitario),
+            subtotal: new Prisma.Decimal(detalle.subtotal),
+          })),
+        });
       }
 
-      return this.mapCompraResponse(compraActualizada);
-    } catch (error) {
-      this.handleDBError(error);
+      return tx.compra.findUnique({
+        where: { compraId: id },
+        include: COMPRA_INCLUDE,
+      });
+    });
+
+    if (!compraActualizada) {
+      throw new InternalServerErrorException(
+        'No se pudo recuperar la compra actualizada',
+      );
     }
+
+    return this.mapCompraResponse(compraActualizada);
   }
 
   async remove(id: number): Promise<void> {
@@ -343,76 +333,72 @@ export class ComprasService {
       );
     }
 
-    try {
-      const compraActualizada = await this.prisma.$transaction(async (tx) => {
-        for (const detalleRecibido of recibirMercaderiaDto.detalles) {
-          const detalle = await tx.detalleCompra.findUnique({
-            where: { detalleId: detalleRecibido.detalleCompraId },
-            include: {
-              producto: true,
-            },
-          });
+    const compraActualizada = await this.prisma.$transaction(async (tx) => {
+      for (const detalleRecibido of recibirMercaderiaDto.detalles) {
+        const detalle = await tx.detalleCompra.findUnique({
+          where: { detalleId: detalleRecibido.detalleCompraId },
+          include: {
+            producto: true,
+          },
+        });
 
-          if (!detalle || detalle.compraId !== id) {
-            throw new NotFoundException(
-              `Detalle de compra ${detalleRecibido.detalleCompraId} no encontrado`,
-            );
-          }
-
-          if (detalleRecibido.cantidadRecibida > detalle.cantidadSolicitada) {
-            throw new BadRequestException(
-              `No se puede recibir mas de lo solicitado para el producto ${detalle.productoId}`,
-            );
-          }
-
-          await tx.detalleCompra.update({
-            where: { detalleId: detalle.detalleId },
-            data: {
-              cantidadRecibida: detalleRecibido.cantidadRecibida,
-            },
-          });
-
-          await tx.movimientoInventario.create({
-            data: {
-              productoId: detalle.productoId,
-              tipo: 'ENTRADA',
-              origenMovimiento: 'COMPRA',
-              documentoReferenciaId: id,
-              cantidad: detalleRecibido.cantidadRecibida,
-              costoUnitario: detalle.costoUnitario,
-            },
-          });
-
-          await tx.inventario.update({
-            where: { productoId: detalle.productoId },
-            data: {
-              cantidadActual: {
-                increment: detalleRecibido.cantidadRecibida,
-              },
-            },
-          });
-
-          await tx.producto.update({
-            where: { productoId: detalle.productoId },
-            data: {
-              costoUnitario: detalle.costoUnitario,
-            },
-          });
+        if (!detalle || detalle.compraId !== id) {
+          throw new NotFoundException(
+            `Detalle de compra ${detalleRecibido.detalleCompraId} no encontrado`,
+          );
         }
 
-        return tx.compra.update({
-          where: { compraId: id },
-          data: {
-            estado: 'COMPLETADO',
-          },
-          include: COMPRA_INCLUDE,
-        });
-      });
+        if (detalleRecibido.cantidadRecibida > detalle.cantidadSolicitada) {
+          throw new BadRequestException(
+            `No se puede recibir mas de lo solicitado para el producto ${detalle.productoId}`,
+          );
+        }
 
-      return this.mapCompraResponse(compraActualizada);
-    } catch (error) {
-      this.handleDBError(error);
-    }
+        await tx.detalleCompra.update({
+          where: { detalleId: detalle.detalleId },
+          data: {
+            cantidadRecibida: detalleRecibido.cantidadRecibida,
+          },
+        });
+
+        await tx.movimientoInventario.create({
+          data: {
+            productoId: detalle.productoId,
+            tipo: 'ENTRADA',
+            origenMovimiento: 'COMPRA',
+            documentoReferenciaId: id,
+            cantidad: detalleRecibido.cantidadRecibida,
+            costoUnitario: detalle.costoUnitario,
+          },
+        });
+
+        await tx.inventario.update({
+          where: { productoId: detalle.productoId },
+          data: {
+            cantidadActual: {
+              increment: detalleRecibido.cantidadRecibida,
+            },
+          },
+        });
+
+        await tx.producto.update({
+          where: { productoId: detalle.productoId },
+          data: {
+            costoUnitario: detalle.costoUnitario,
+          },
+        });
+      }
+
+      return tx.compra.update({
+        where: { compraId: id },
+        data: {
+          estado: 'COMPLETADO',
+        },
+        include: COMPRA_INCLUDE,
+      });
+    });
+
+    return this.mapCompraResponse(compraActualizada);
   }
 
   async cancelarCompra(id: number) {
@@ -535,29 +521,5 @@ export class ComprasService {
       fechaModificacion: compra.fechaActualizacion,
       detalles,
     };
-  }
-
-  private handleDBError(error: unknown): never {
-    if (
-      error instanceof NotFoundException ||
-      error instanceof BadRequestException ||
-      error instanceof InternalServerErrorException
-    ) {
-      throw error;
-    }
-
-    if (error instanceof Prisma.PrismaClientKnownRequestError) {
-      if (error.code === 'P2025') {
-        throw new NotFoundException('Registro no encontrado.');
-      }
-
-      if (error.code === 'P2003') {
-        throw new BadRequestException(
-          'Error de llave foranea en la base de datos.',
-        );
-      }
-    }
-
-    throw new InternalServerErrorException('Database error');
   }
 }

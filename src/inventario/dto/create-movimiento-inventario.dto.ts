@@ -7,23 +7,23 @@ import {
 export class CreateMovimientoInventarioDto {
   @IsInt()
   @IsPositive()
-  productoId: number;
+  productoId!: number;
 
   @IsEnum(TipoMovimientoInventario)
-  tipoMovimiento: TipoMovimientoInventario;
+  tipoMovimiento!: TipoMovimientoInventario;
 
   @IsInt()
   @Min(1)
-  cantidad: number;
+  cantidad!: number;
 
   @IsEnum(OrigenMovimiento)
-  origenMovimiento: OrigenMovimiento;
+  origenMovimiento!: OrigenMovimiento;
 
   @IsInt()
   @IsPositive()
-  documentoReferenciaId: number;
+  documentoReferenciaId!: number;
 
   @IsNumber({ maxDecimalPlaces: 2 })
   @Min(0)
-  costoUnitario: number;
+  costoUnitario!: number;
 }

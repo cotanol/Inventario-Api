@@ -19,7 +19,7 @@ export class CreateUserDto {
   })
   @IsString()
   @IsEmail()
-  correoElectronico: string;
+  correoElectronico!: string;
 
   @ApiProperty({
     description:
@@ -33,7 +33,7 @@ export class CreateUserDto {
     message:
       'The password must have a Uppercase, lowercase letter and a number',
   })
-  clave: string;
+  clave!: string;
 
   @ApiProperty({
     description: 'Nombres completos del usuario',
@@ -41,7 +41,7 @@ export class CreateUserDto {
   })
   @IsString()
   @MinLength(1)
-  nombres: string;
+  nombres!: string;
 
   @ApiProperty({
     description: 'Apellido paterno del usuario',
@@ -49,7 +49,7 @@ export class CreateUserDto {
   })
   @IsString()
   @MinLength(1)
-  apellidoPaterno: string;
+  apellidoPaterno!: string;
 
   @ApiProperty({
     description: 'Documento Nacional de Identidad del usuario',
@@ -58,7 +58,7 @@ export class CreateUserDto {
   @IsString()
   @MinLength(8)
   @MaxLength(15)
-  dni: string;
+  dni!: string;
 
   @ApiProperty({
     description: 'Apellido materno del usuario (opcional)',
@@ -89,5 +89,5 @@ export class CreateUserDto {
   @IsInt({ each: true })
   @Type(() => Number)
   @ArrayMinSize(1)
-  perfilesIds: number[];
+  perfilesIds!: number[];
 }

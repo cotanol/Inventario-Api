@@ -9,15 +9,15 @@ import {
 export class CreateInventarioDto {
   @IsNumber()
   @IsPositive()
-  productoId: number;
+  productoId!: number;
 
   @IsNumber()
   @Min(1)
-  cantidadActual: number;
+  cantidadActual!: number;
 
   @IsNumber()
   @Min(1)
-  cantidadMinima: number;
+  cantidadMinima!: number;
 
   @IsBoolean()
   @IsOptional()

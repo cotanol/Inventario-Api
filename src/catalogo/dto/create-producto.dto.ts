@@ -19,7 +19,7 @@ export class CreateProductoDto {
   @IsString()
   @IsNotEmpty()
   @MaxLength(100)
-  nombre: string;
+  nombre!: string;
 
   @IsString()
   @IsOptional()
@@ -28,15 +28,15 @@ export class CreateProductoDto {
 
   @IsNumber()
   @IsPositive()
-  grupoId: number;
+  grupoId!: number;
 
   @IsNumber()
   @IsPositive()
-  marcaId: number;
+  marcaId!: number;
 
   @IsNumber({ maxDecimalPlaces: 2 })
   @IsPositive()
-  precioVenta: number;
+  precioVenta!: number;
 
   @IsNumber({ maxDecimalPlaces: 2 })
   @IsPositive()

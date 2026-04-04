@@ -1,10 +1,4 @@
-import {
-  Injectable,
-  NotFoundException,
-  BadRequestException,
-  InternalServerErrorException,
-} from '@nestjs/common';
-import { Prisma } from 'generated/prisma/client';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { CreateVendedorDto, UpdateVendedorDto, ChangeStatusDto } from './dto';
 import { PrismaService } from 'src/prisma/prisma.service';
 import { PaginationQueryDto } from 'src/common/dto/pagination-query.dto';
@@ -15,13 +9,9 @@ export class VendedoresService {
   constructor(private readonly prisma: PrismaService) {}
 
   async create(createVendedorDto: CreateVendedorDto) {
-    try {
-      return await this.prisma.vendedor.create({
-        data: createVendedorDto,
-      });
-    } catch (error) {
-      this.handleDBError(error);
-    }
+    return this.prisma.vendedor.create({
+      data: createVendedorDto,
+    });
   }
 
   async findAll(query: PaginationQueryDto) {
@@ -66,14 +56,10 @@ export class VendedoresService {
   async update(id: number, updateVendedorDto: UpdateVendedorDto) {
     await this.findOne(id);
 
-    try {
-      return await this.prisma.vendedor.update({
-        where: { vendedorId: id },
-        data: updateVendedorDto,
-      });
-    } catch (error) {
-      this.handleDBError(error);
-    }
+    return this.prisma.vendedor.update({
+      where: { vendedorId: id },
+      data: updateVendedorDto,
+    });
   }
 
   async changeStatus(
@@ -92,23 +78,5 @@ export class VendedoresService {
     return {
       message: `Estado del vendedor actualizado a ${estadoRegistro ? 'activo' : 'inactivo'}.`,
     };
-  }
-
-  private handleDBError(error: unknown): never {
-    if (
-      error instanceof Prisma.PrismaClientKnownRequestError &&
-      error.code === 'P2002'
-    ) {
-      throw new BadRequestException(
-        Array.isArray(error.meta?.target)
-          ? error.meta.target.join(', ')
-          : 'Ya existe un vendedor con ese DNI o correo.',
-      );
-    }
-
-    console.error(error);
-    throw new InternalServerErrorException(
-      'Error inesperado. Revisa los logs del servidor.',
-    );
   }
 }

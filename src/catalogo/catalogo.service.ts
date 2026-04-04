@@ -1,6 +1,5 @@
 import {
   BadRequestException,
-  ConflictException,
   Injectable,
   InternalServerErrorException,
   NotFoundException,
@@ -27,19 +26,15 @@ export class CatalogoService {
   constructor(private readonly prisma: PrismaService) {}
 
   async createLinea(createLineaDto: CreateLineaDto) {
-    try {
-      return await this.prisma.linea.create({
-        data: {
-          nombre: createLineaDto.nombre,
-          estadoRegistro: createLineaDto.estadoRegistro,
-        },
-        include: {
-          grupos: true,
-        },
-      });
-    } catch (error) {
-      this.handleDBError(error, 'Ya existe una linea con ese nombre');
-    }
+    return this.prisma.linea.create({
+      data: {
+        nombre: createLineaDto.nombre,
+        estadoRegistro: createLineaDto.estadoRegistro,
+      },
+      include: {
+        grupos: true,
+      },
+    });
   }
 
   async findAllLineas(query: PaginationQueryDto) {
@@ -94,62 +89,50 @@ export class CatalogoService {
   async updateLinea(id: number, updateLineaDto: UpdateLineaDto) {
     await this.findOneLinea(id);
 
-    try {
-      return await this.prisma.linea.update({
-        where: {
-          lineaId: id,
-        },
-        data: {
-          nombre: updateLineaDto.nombre,
-          estadoRegistro: updateLineaDto.estadoRegistro,
-        },
-        include: {
-          grupos: true,
-        },
-      });
-    } catch (error) {
-      this.handleDBError(error, 'Ya existe una linea con ese nombre');
-    }
+    return this.prisma.linea.update({
+      where: {
+        lineaId: id,
+      },
+      data: {
+        nombre: updateLineaDto.nombre,
+        estadoRegistro: updateLineaDto.estadoRegistro,
+      },
+      include: {
+        grupos: true,
+      },
+    });
   }
 
   async changeLineaStatus(id: number, changeStatusDto: ChangeStatusDto) {
     await this.findOneLinea(id);
 
-    try {
-      return await this.prisma.linea.update({
-        where: {
-          lineaId: id,
-        },
-        data: {
-          estadoRegistro: changeStatusDto.estadoRegistro,
-        },
-        include: {
-          grupos: true,
-        },
-      });
-    } catch (error) {
-      this.handleDBError(error);
-    }
+    return this.prisma.linea.update({
+      where: {
+        lineaId: id,
+      },
+      data: {
+        estadoRegistro: changeStatusDto.estadoRegistro,
+      },
+      include: {
+        grupos: true,
+      },
+    });
   }
 
   async createGrupo(createGrupoDto: CreateGrupoDto) {
     await this.findOneLinea(createGrupoDto.lineaId);
 
-    try {
-      return await this.prisma.grupo.create({
-        data: {
-          nombre: createGrupoDto.nombre,
-          estadoRegistro: createGrupoDto.estadoRegistro,
-          lineaId: createGrupoDto.lineaId,
-        },
-        include: {
-          linea: true,
-          productos: true,
-        },
-      });
-    } catch (error) {
-      this.handleDBError(error);
-    }
+    return this.prisma.grupo.create({
+      data: {
+        nombre: createGrupoDto.nombre,
+        estadoRegistro: createGrupoDto.estadoRegistro,
+        lineaId: createGrupoDto.lineaId,
+      },
+      include: {
+        linea: true,
+        productos: true,
+      },
+    });
   }
 
   async findAllGrupos(query: PaginationQueryDto) {
@@ -264,78 +247,66 @@ export class CatalogoService {
       await this.findOneLinea(updateGrupoDto.lineaId);
     }
 
-    try {
-      return await this.prisma.grupo.update({
-        where: {
-          grupoId: id,
-        },
-        data: {
-          nombre: updateGrupoDto.nombre,
-          estadoRegistro: updateGrupoDto.estadoRegistro,
-          lineaId: updateGrupoDto.lineaId,
-        },
-        include: {
-          linea: true,
-          productos: {
-            include: {
-              inventario: true,
-            },
+    return this.prisma.grupo.update({
+      where: {
+        grupoId: id,
+      },
+      data: {
+        nombre: updateGrupoDto.nombre,
+        estadoRegistro: updateGrupoDto.estadoRegistro,
+        lineaId: updateGrupoDto.lineaId,
+      },
+      include: {
+        linea: true,
+        productos: {
+          include: {
+            inventario: true,
           },
         },
-      });
-    } catch (error) {
-      this.handleDBError(error);
-    }
+      },
+    });
   }
 
   async changeGrupoStatus(id: number, changeStatusDto: ChangeStatusDto) {
     await this.findOneGrupo(id);
 
-    try {
-      return await this.prisma.grupo.update({
-        where: {
-          grupoId: id,
-        },
-        data: {
-          estadoRegistro: changeStatusDto.estadoRegistro,
-        },
-        include: {
-          linea: true,
-          productos: {
-            include: {
-              inventario: true,
-            },
+    return this.prisma.grupo.update({
+      where: {
+        grupoId: id,
+      },
+      data: {
+        estadoRegistro: changeStatusDto.estadoRegistro,
+      },
+      include: {
+        linea: true,
+        productos: {
+          include: {
+            inventario: true,
           },
         },
-      });
-    } catch (error) {
-      this.handleDBError(error);
-    }
+      },
+    });
   }
 
   async createMarca(createMarcaDto: CreateMarcaDto) {
-    try {
-      return await this.prisma.marca.create({
-        data: {
-          nombre: createMarcaDto.nombre,
-          estadoRegistro: createMarcaDto.estadoRegistro,
-        },
-        include: {
-          productos: {
-            include: {
-              grupo: {
-                include: {
-                  linea: true,
-                },
+    return this.prisma.marca.create({
+      data: {
+        nombre: createMarcaDto.nombre,
+        estadoRegistro: createMarcaDto.estadoRegistro,
+      },
+      include: {
+        productos: {
+          include: {
+            grupo: {
+              include: {
+                linea: true,
               },
-              inventario: true,
             },
+            inventario: true,
           },
         },
-      });
-    } catch (error) {
-      this.handleDBError(error, 'Ya existe una marca con ese nombre');
-    }
+      },
+    });
   }
 
   async findAllMarcas(query: PaginationQueryDto) {
@@ -408,60 +379,52 @@ export class CatalogoService {
   async updateMarca(id: number, updateMarcaDto: UpdateMarcaDto) {
     await this.findOneMarca(id);
 
-    try {
-      return await this.prisma.marca.update({
-        where: {
-          marcaId: id,
-        },
-        data: {
-          nombre: updateMarcaDto.nombre,
-          estadoRegistro: updateMarcaDto.estadoRegistro,
-        },
-        include: {
-          productos: {
-            include: {
-              grupo: {
-                include: {
-                  linea: true,
-                },
+    return this.prisma.marca.update({
+      where: {
+        marcaId: id,
+      },
+      data: {
+        nombre: updateMarcaDto.nombre,
+        estadoRegistro: updateMarcaDto.estadoRegistro,
+      },
+      include: {
+        productos: {
+          include: {
+            grupo: {
+              include: {
+                linea: true,
               },
-              inventario: true,
             },
+            inventario: true,
           },
         },
-      });
-    } catch (error) {
-      this.handleDBError(error, 'Ya existe una marca con ese nombre');
-    }
+      },
+    });
   }
 
   async changeMarcaStatus(id: number, changeStatusDto: ChangeStatusDto) {
     await this.findOneMarca(id);
 
-    try {
-      return await this.prisma.marca.update({
-        where: {
-          marcaId: id,
-        },
-        data: {
-          estadoRegistro: changeStatusDto.estadoRegistro,
-        },
-        include: {
-          productos: {
-            include: {
-              grupo: {
-                include: {
-                  linea: true,
-                },
+    return this.prisma.marca.update({
+      where: {
+        marcaId: id,
+      },
+      data: {
+        estadoRegistro: changeStatusDto.estadoRegistro,
+      },
+      include: {
+        productos: {
+          include: {
+            grupo: {
+              include: {
+                linea: true,
               },
-              inventario: true,
             },
+            inventario: true,
           },
         },
-      });
-    } catch (error) {
-      this.handleDBError(error);
-    }
+      },
+    });
   }
 
   async createProducto(createProductoDto: CreateProductoDto) {
@@ -485,51 +448,44 @@ export class CatalogoService {
       throw new BadRequestException('La cantidad minima no puede ser negativa');
     }
 
-    try {
-      return await this.prisma.$transaction(async (tx) => {
-        const productoCreado = await tx.producto.create({
-          data: {
-            ...productoData,
-            grupoId,
-            marcaId,
-            costoUnitario: costoReferencial ?? 0,
-            inventario: {
-              create: {
-                cantidadActual: cantidadActual ?? 0,
-                cantidadMinima: cantidadMinima ?? 0,
-              },
+    return this.prisma.$transaction(async (tx) => {
+      const productoCreado = await tx.producto.create({
+        data: {
+          ...productoData,
+          grupoId,
+          marcaId,
+          costoUnitario: costoReferencial ?? 0,
+          inventario: {
+            create: {
+              cantidadActual: cantidadActual ?? 0,
+              cantidadMinima: cantidadMinima ?? 0,
             },
           },
-        });
-
-        const codigo = this.buildProductoCode(productoCreado.productoId);
-
-        const producto = await tx.producto.update({
-          where: {
-            productoId: productoCreado.productoId,
-          },
-          data: {
-            codigo,
-          },
-          include: {
-            grupo: {
-              include: {
-                linea: true,
-              },
-            },
-            marca: true,
-            inventario: true,
-          },
-        });
-
-        return this.mapProductoResponse(producto);
+        },
       });
-    } catch (error) {
-      this.handleDBError(
-        error,
-        'Error de concurrencia al generar el codigo. Intente de nuevo.',
-      );
-    }
+
+      const codigo = this.buildProductoCode(productoCreado.productoId);
+
+      const producto = await tx.producto.update({
+        where: {
+          productoId: productoCreado.productoId,
+        },
+        data: {
+          codigo,
+        },
+        include: {
+          grupo: {
+            include: {
+              linea: true,
+            },
+          },
+          marca: true,
+          inventario: true,
+        },
+      });
+
+      return this.mapProductoResponse(producto);
+    });
   }
 
   async findAllProductos(query: PaginationQueryDto) {
@@ -621,73 +577,37 @@ export class CatalogoService {
       throw new BadRequestException('La cantidad minima no puede ser negativa');
     }
 
-    try {
-      return await this.prisma.$transaction(async (tx) => {
-        await tx.producto.update({
-          where: {
-            productoId: id,
-          },
-          data: {
-            nombre: productoData.nombre,
-            descripcion: productoData.descripcion,
-            precioVenta: productoData.precioVenta,
-            costoUnitario: costoReferencial,
-            estadoRegistro: productoData.estadoRegistro,
-            grupoId,
-            marcaId,
-          },
-        });
-
-        if (cantidadActual !== undefined || cantidadMinima !== undefined) {
-          await tx.inventario.update({
-            where: {
-              productoId: id,
-            },
-            data: {
-              cantidadActual,
-              cantidadMinima,
-            },
-          });
-        }
-
-        const updatedProducto = await tx.producto.findUnique({
-          where: {
-            productoId: id,
-          },
-          include: {
-            grupo: {
-              include: {
-                linea: true,
-              },
-            },
-            marca: true,
-            inventario: true,
-          },
-        });
-
-        if (!updatedProducto) {
-          throw new InternalServerErrorException(
-            'No se pudo recuperar el producto actualizado',
-          );
-        }
-
-        return this.mapProductoResponse(updatedProducto);
-      });
-    } catch (error) {
-      this.handleDBError(error, 'Ya existe un producto con ese codigo');
-    }
-  }
-
-  async changeProductoStatus(id: number, changeStatusDto: ChangeStatusDto) {
-    await this.findOneProducto(id);
-
-    try {
-      const producto = await this.prisma.producto.update({
+    return this.prisma.$transaction(async (tx) => {
+      await tx.producto.update({
         where: {
           productoId: id,
         },
         data: {
-          estadoRegistro: changeStatusDto.estadoRegistro,
+          nombre: productoData.nombre,
+          descripcion: productoData.descripcion,
+          precioVenta: productoData.precioVenta,
+          costoUnitario: costoReferencial,
+          estadoRegistro: productoData.estadoRegistro,
+          grupoId,
+          marcaId,
+        },
+      });
+
+      if (cantidadActual !== undefined || cantidadMinima !== undefined) {
+        await tx.inventario.update({
+          where: {
+            productoId: id,
+          },
+          data: {
+            cantidadActual,
+            cantidadMinima,
+          },
+        });
+      }
+
+      const updatedProducto = await tx.producto.findUnique({
+        where: {
+          productoId: id,
         },
         include: {
           grupo: {
@@ -700,10 +620,38 @@ export class CatalogoService {
         },
       });
 
-      return this.mapProductoResponse(producto);
-    } catch (error) {
-      this.handleDBError(error);
-    }
+      if (!updatedProducto) {
+        throw new InternalServerErrorException(
+          'No se pudo recuperar el producto actualizado',
+        );
+      }
+
+      return this.mapProductoResponse(updatedProducto);
+    });
+  }
+
+  async changeProductoStatus(id: number, changeStatusDto: ChangeStatusDto) {
+    await this.findOneProducto(id);
+
+    const producto = await this.prisma.producto.update({
+      where: {
+        productoId: id,
+      },
+      data: {
+        estadoRegistro: changeStatusDto.estadoRegistro,
+      },
+      include: {
+        grupo: {
+          include: {
+            linea: true,
+          },
+        },
+        marca: true,
+        inventario: true,
+      },
+    });
+
+    return this.mapProductoResponse(producto);
   }
 
   private buildProductoCode(productoId: number): string {
@@ -746,37 +694,5 @@ export class CatalogoService {
         fechaModificacion: producto.inventario!.fechaActualizacion,
       },
     };
-  }
-
-  private handleDBError(error: unknown, duplicateMessage?: string): never {
-    if (
-      error instanceof NotFoundException ||
-      error instanceof BadRequestException ||
-      error instanceof ConflictException ||
-      error instanceof InternalServerErrorException
-    ) {
-      throw error;
-    }
-
-    if (error instanceof Prisma.PrismaClientKnownRequestError) {
-      if (error.code === 'P2025') {
-        throw new NotFoundException('Registro no encontrado.');
-      }
-
-      if (error.code === 'P2002') {
-        throw new ConflictException(
-          duplicateMessage ??
-            'Ya existe un registro con datos unicos duplicados.',
-        );
-      }
-
-      if (error.code === 'P2003') {
-        throw new BadRequestException(
-          'Error de llave foranea en la base de datos.',
-        );
-      }
-    }
-
-    throw new InternalServerErrorException('Database error');
   }
 }

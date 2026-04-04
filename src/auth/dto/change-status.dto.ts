@@ -6,5 +6,5 @@ export class ChangeStatusDto {
     message:
       'El campo estadoRegistro debe ser un valor booleano (true o false).',
   })
-  estadoRegistro: boolean;
+  estadoRegistro!: boolean;
 }

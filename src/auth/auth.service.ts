@@ -1,6 +1,5 @@
 import {
   BadRequestException,
-  ConflictException,
   Injectable,
   InternalServerErrorException,
   NotFoundException,
@@ -71,52 +70,48 @@ export class AuthService {
       throw new BadRequestException('Uno o mas IDs de perfil no son validos.');
     }
 
-    try {
-      const hashedPassword = await bcrypt.hash(clave, 10);
-      const emailLower = userData.correoElectronico.toLowerCase().trim();
+    const hashedPassword = await bcrypt.hash(clave, 10);
+    const emailLower = userData.correoElectronico.toLowerCase().trim();
 
-      const createdUser = await this.prisma.$transaction(async (tx) => {
-        const user = await tx.usuario.create({
-          data: {
-            dni: userData.dni,
-            nombre: userData.nombres,
-            apellido: this.joinApellidos(
-              userData.apellidoPaterno,
-              userData.apellidoMaterno,
-            ),
-            email: emailLower,
-            password: hashedPassword,
-          },
-        });
-
-        await tx.usuarioPerfil.createMany({
-          data: perfilesIds.map((perfilId) => ({
-            usuarioId: user.usuarioId,
-            perfilId,
-          })),
-        });
-
-        return tx.usuario.findUnique({
-          where: { usuarioId: user.usuarioId },
-          include: userAuthInclude,
-        });
+    const createdUser = await this.prisma.$transaction(async (tx) => {
+      const user = await tx.usuario.create({
+        data: {
+          dni: userData.dni,
+          nombre: userData.nombres,
+          apellido: this.joinApellidos(
+            userData.apellidoPaterno,
+            userData.apellidoMaterno,
+          ),
+          email: emailLower,
+          password: hashedPassword,
+        },
       });
 
-      if (!createdUser) {
-        throw new InternalServerErrorException(
-          'Error al crear el usuario: no se pudo recuperar el registro.',
-        );
-      }
+      await tx.usuarioPerfil.createMany({
+        data: perfilesIds.map((perfilId) => ({
+          usuarioId: user.usuarioId,
+          perfilId,
+        })),
+      });
 
-      const token = this.getJwtToken({ usuarioId: createdUser.usuarioId });
+      return tx.usuario.findUnique({
+        where: { usuarioId: user.usuarioId },
+        include: userAuthInclude,
+      });
+    });
 
-      return {
-        user: this.buildUserResponse(createdUser),
-        token,
-      };
-    } catch (error) {
-      this.handleDBError(error);
+    if (!createdUser) {
+      throw new InternalServerErrorException(
+        'Error al crear el usuario: no se pudo recuperar el registro.',
+      );
     }
+
+    const token = this.getJwtToken({ usuarioId: createdUser.usuarioId });
+
+    return {
+      user: this.buildUserResponse(createdUser),
+      token,
+    };
   }
 
   async login(loginUserDto: LoginUserDto) {
@@ -269,55 +264,47 @@ export class AuthService {
       userDataToUpdate,
     );
 
-    try {
-      const updatedUser = await this.prisma.$transaction(async (tx) => {
-        if (this.hasPrismaUserUpdateData(userData)) {
-          await tx.usuario.update({
-            where: { usuarioId: id },
-            data: userData,
-          });
-        }
-
-        if (perfilesIds) {
-          await tx.usuarioPerfil.deleteMany({ where: { usuarioId: id } });
-
-          await tx.usuarioPerfil.createMany({
-            data: perfilesIds.map((perfilId) => ({
-              usuarioId: id,
-              perfilId,
-            })),
-          });
-        }
-
-        return tx.usuario.findUnique({
+    const updatedUser = await this.prisma.$transaction(async (tx) => {
+      if (this.hasPrismaUserUpdateData(userData)) {
+        await tx.usuario.update({
           where: { usuarioId: id },
-          include: userAuthInclude,
+          data: userData,
         });
-      });
-
-      if (!updatedUser) {
-        throw new InternalServerErrorException(
-          'No se pudo encontrar el usuario despues de la actualizacion.',
-        );
       }
 
-      return this.buildUserResponse(updatedUser);
-    } catch (error) {
-      this.handleDBError(error);
+      if (perfilesIds) {
+        await tx.usuarioPerfil.deleteMany({ where: { usuarioId: id } });
+
+        await tx.usuarioPerfil.createMany({
+          data: perfilesIds.map((perfilId) => ({
+            usuarioId: id,
+            perfilId,
+          })),
+        });
+      }
+
+      return tx.usuario.findUnique({
+        where: { usuarioId: id },
+        include: userAuthInclude,
+      });
+    });
+
+    if (!updatedUser) {
+      throw new InternalServerErrorException(
+        'No se pudo encontrar el usuario despues de la actualizacion.',
+      );
     }
+
+    return this.buildUserResponse(updatedUser);
   }
 
   async changeStatus(userId: number, changeStatusDto: ChangeStatusDto) {
     const { estadoRegistro } = changeStatusDto;
 
-    try {
-      await this.prisma.usuario.update({
-        where: { usuarioId: userId },
-        data: { estadoRegistro },
-      });
-    } catch (error) {
-      this.handleDBError(error);
-    }
+    await this.prisma.usuario.update({
+      where: { usuarioId: userId },
+      data: { estadoRegistro },
+    });
 
     return { message: `Estado del usuario actualizado a ${estadoRegistro}.` };
   }
@@ -433,38 +420,34 @@ export class AuthService {
       }
     }
 
-    try {
-      const perfil = await this.prisma.$transaction(async (tx) => {
-        const createdPerfil = await tx.perfil.create({
-          data: { nombre, descripcion },
-        });
-
-        if (permisos.length > 0) {
-          await tx.permisoPerfil.createMany({
-            data: permisos.map((opt) => ({
-              perfilId: createdPerfil.perfilId,
-              permisoId: opt.permisoId,
-              orden: opt.orden,
-            })),
-          });
-        }
-
-        return tx.perfil.findUnique({
-          where: { perfilId: createdPerfil.perfilId },
-          include: perfilWithPermisosInclude,
-        });
+    const perfil = await this.prisma.$transaction(async (tx) => {
+      const createdPerfil = await tx.perfil.create({
+        data: { nombre, descripcion },
       });
 
-      if (!perfil) {
-        throw new InternalServerErrorException(
-          'No se pudo recuperar el perfil recien creado.',
-        );
+      if (permisos.length > 0) {
+        await tx.permisoPerfil.createMany({
+          data: permisos.map((opt) => ({
+            perfilId: createdPerfil.perfilId,
+            permisoId: opt.permisoId,
+            orden: opt.orden,
+          })),
+        });
       }
 
-      return this.mapPerfilResponse(perfil);
-    } catch (error) {
-      this.handleDBError(error);
+      return tx.perfil.findUnique({
+        where: { perfilId: createdPerfil.perfilId },
+        include: perfilWithPermisosInclude,
+      });
+    });
+
+    if (!perfil) {
+      throw new InternalServerErrorException(
+        'No se pudo recuperar el perfil recien creado.',
+      );
     }
+
+    return this.mapPerfilResponse(perfil);
   }
 
   async findOnePerfil(id: number) {
@@ -511,58 +494,50 @@ export class AuthService {
 
     const { permisos, ...perfilData } = updatePerfilDto;
 
-    try {
-      const updatedPerfil = await this.prisma.$transaction(async (tx) => {
-        if (Object.keys(perfilData).length > 0) {
-          await tx.perfil.update({
-            where: { perfilId: id },
-            data: perfilData,
-          });
-        }
-
-        if (permisos) {
-          await tx.permisoPerfil.deleteMany({ where: { perfilId: id } });
-
-          if (permisos.length > 0) {
-            await tx.permisoPerfil.createMany({
-              data: permisos.map((opt) => ({
-                perfilId: id,
-                permisoId: opt.permisoId,
-                orden: opt.orden,
-              })),
-            });
-          }
-        }
-
-        return tx.perfil.findUnique({
+    const updatedPerfil = await this.prisma.$transaction(async (tx) => {
+      if (Object.keys(perfilData).length > 0) {
+        await tx.perfil.update({
           where: { perfilId: id },
-          include: perfilWithPermisosInclude,
+          data: perfilData,
         });
-      });
-
-      if (!updatedPerfil) {
-        throw new InternalServerErrorException(
-          'No se pudo encontrar el perfil despues de la actualizacion.',
-        );
       }
 
-      return this.mapPerfilResponse(updatedPerfil);
-    } catch (error) {
-      this.handleDBError(error);
+      if (permisos) {
+        await tx.permisoPerfil.deleteMany({ where: { perfilId: id } });
+
+        if (permisos.length > 0) {
+          await tx.permisoPerfil.createMany({
+            data: permisos.map((opt) => ({
+              perfilId: id,
+              permisoId: opt.permisoId,
+              orden: opt.orden,
+            })),
+          });
+        }
+      }
+
+      return tx.perfil.findUnique({
+        where: { perfilId: id },
+        include: perfilWithPermisosInclude,
+      });
+    });
+
+    if (!updatedPerfil) {
+      throw new InternalServerErrorException(
+        'No se pudo encontrar el perfil despues de la actualizacion.',
+      );
     }
+
+    return this.mapPerfilResponse(updatedPerfil);
   }
 
   async changeStatusPerfil(id: number, changeStatusDto: ChangeStatusDto) {
     const { estadoRegistro } = changeStatusDto;
 
-    try {
-      await this.prisma.perfil.update({
-        where: { perfilId: id },
-        data: { estadoRegistro },
-      });
-    } catch (error) {
-      this.handleDBError(error);
-    }
+    await this.prisma.perfil.update({
+      where: { perfilId: id },
+      data: { estadoRegistro },
+    });
 
     return { message: 'Estado del perfil actualizado correctamente.' };
   }
@@ -731,35 +706,5 @@ export class AuthService {
       .replace(/[^a-zA-Z0-9]+/g, '_')
       .replace(/^_+|_+$/g, '')
       .toUpperCase();
-  }
-
-  private handleDBError(error: unknown): never {
-    if (
-      error instanceof NotFoundException ||
-      error instanceof BadRequestException ||
-      error instanceof ConflictException
-    ) {
-      throw error;
-    }
-
-    if (error instanceof Prisma.PrismaClientKnownRequestError) {
-      if (error.code === 'P2025') {
-        throw new NotFoundException('Registro no encontrado.');
-      }
-
-      if (error.code === 'P2002') {
-        throw new ConflictException(
-          'Ya existe un registro con datos unicos duplicados.',
-        );
-      }
-
-      if (error.code === 'P2003') {
-        throw new BadRequestException(
-          'Error de llave foranea en la base de datos.',
-        );
-      }
-    }
-
-    throw new InternalServerErrorException('Database error');
   }
 }

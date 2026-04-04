@@ -20,7 +20,7 @@ export class ChangeEstadoCompraDto {
     message:
       'El estado debe ser BORRADOR, ORDENADO, EN_TRANSITO, COMPLETADO o CANCELADO',
   })
-  estadoCompra: EstadoCompra;
+  estadoCompra!: EstadoCompra;
 
   @IsDateString()
   @IsOptional()
@@ -31,18 +31,18 @@ export class ChangeEstadoCompraDto {
 export class CantidadRecibidaDto {
   @IsInt()
   @IsPositive()
-  detalleCompraId: number;
+  detalleCompraId!: number;
 
   @IsInt()
   @IsPositive()
-  cantidadRecibida: number;
+  cantidadRecibida!: number;
 }
 
 export class RecibirMercaderiaDto {
   @IsArray()
   @ValidateNested({ each: true })
   @Type(() => CantidadRecibidaDto)
-  detalles: CantidadRecibidaDto[];
+  detalles!: CantidadRecibidaDto[];
 }
 
 // DTO para confirmar orden (pasar de BORRADOR a ORDENADO)

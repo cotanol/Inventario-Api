@@ -37,46 +37,42 @@ export class PedidosService {
     const { totalNeto, detallesValidados } =
       await this.validateAndBuildDetalles(createPedidoDto.detalles);
 
-    try {
-      const pedidoCreado = await this.prisma.$transaction(async (tx) => {
-        const pedido = await tx.pedido.create({
-          data: {
-            clienteId: createPedidoDto.clienteId,
-            vendedorId: createPedidoDto.vendedorId,
-            tipoPago: createPedidoDto.tipoPago,
-            subtotal: new Prisma.Decimal(totalNeto),
-            igv: new Prisma.Decimal(0),
-            total: new Prisma.Decimal(totalNeto),
-            estado: 'PENDIENTE',
-          },
-        });
-
-        await tx.detallePedido.createMany({
-          data: detallesValidados.map((detalle) => ({
-            pedidoId: pedido.pedidoId,
-            productoId: detalle.productoId,
-            cantidad: detalle.cantidad,
-            precioUnitario: new Prisma.Decimal(detalle.precioUnitario),
-            subtotal: new Prisma.Decimal(detalle.subtotalLinea),
-          })),
-        });
-
-        return tx.pedido.findUnique({
-          where: { pedidoId: pedido.pedidoId },
-          include: PEDIDO_INCLUDE,
-        });
+    const pedidoCreado = await this.prisma.$transaction(async (tx) => {
+      const pedido = await tx.pedido.create({
+        data: {
+          clienteId: createPedidoDto.clienteId,
+          vendedorId: createPedidoDto.vendedorId,
+          tipoPago: createPedidoDto.tipoPago,
+          subtotal: new Prisma.Decimal(totalNeto),
+          igv: new Prisma.Decimal(0),
+          total: new Prisma.Decimal(totalNeto),
+          estado: 'PENDIENTE',
+        },
       });
 
-      if (!pedidoCreado) {
-        throw new InternalServerErrorException(
-          'No se pudo recuperar el pedido creado',
-        );
-      }
+      await tx.detallePedido.createMany({
+        data: detallesValidados.map((detalle) => ({
+          pedidoId: pedido.pedidoId,
+          productoId: detalle.productoId,
+          cantidad: detalle.cantidad,
+          precioUnitario: new Prisma.Decimal(detalle.precioUnitario),
+          subtotal: new Prisma.Decimal(detalle.subtotalLinea),
+        })),
+      });
 
-      return this.mapPedidoResponse(pedidoCreado);
-    } catch (error) {
-      this.handleDBError(error);
+      return tx.pedido.findUnique({
+        where: { pedidoId: pedido.pedidoId },
+        include: PEDIDO_INCLUDE,
+      });
+    });
+
+    if (!pedidoCreado) {
+      throw new InternalServerErrorException(
+        'No se pudo recuperar el pedido creado',
+      );
     }
+
+    return this.mapPedidoResponse(pedidoCreado);
   }
 
   async findAll(query: PaginationQueryDto) {
@@ -158,53 +154,48 @@ export class PedidosService {
       totalNeto = detallesResult.totalNeto;
     }
 
-    try {
-      const pedidoActualizado = await this.prisma.$transaction(async (tx) => {
-        await tx.pedido.update({
-          where: { pedidoId: id },
-          data: {
-            clienteId: updatePedidoDto.clienteId,
-            vendedorId: updatePedidoDto.vendedorId,
-            tipoPago: updatePedidoDto.tipoPago,
-            subtotal:
-              totalNeto !== null ? new Prisma.Decimal(totalNeto) : undefined,
-            total:
-              totalNeto !== null ? new Prisma.Decimal(totalNeto) : undefined,
-          },
-        });
-
-        if (detallesValidados) {
-          await tx.detallePedido.deleteMany({
-            where: { pedidoId: id },
-          });
-
-          await tx.detallePedido.createMany({
-            data: detallesValidados.map((detalle) => ({
-              pedidoId: id,
-              productoId: detalle.productoId,
-              cantidad: detalle.cantidad,
-              precioUnitario: new Prisma.Decimal(detalle.precioUnitario),
-              subtotal: new Prisma.Decimal(detalle.subtotalLinea),
-            })),
-          });
-        }
-
-        return tx.pedido.findUnique({
-          where: { pedidoId: id },
-          include: PEDIDO_INCLUDE,
-        });
+    const pedidoActualizado = await this.prisma.$transaction(async (tx) => {
+      await tx.pedido.update({
+        where: { pedidoId: id },
+        data: {
+          clienteId: updatePedidoDto.clienteId,
+          vendedorId: updatePedidoDto.vendedorId,
+          tipoPago: updatePedidoDto.tipoPago,
+          subtotal:
+            totalNeto !== null ? new Prisma.Decimal(totalNeto) : undefined,
+          total: totalNeto !== null ? new Prisma.Decimal(totalNeto) : undefined,
+        },
       });
 
-      if (!pedidoActualizado) {
-        throw new InternalServerErrorException(
-          'No se pudo recuperar el pedido actualizado',
-        );
+      if (detallesValidados) {
+        await tx.detallePedido.deleteMany({
+          where: { pedidoId: id },
+        });
+
+        await tx.detallePedido.createMany({
+          data: detallesValidados.map((detalle) => ({
+            pedidoId: id,
+            productoId: detalle.productoId,
+            cantidad: detalle.cantidad,
+            precioUnitario: new Prisma.Decimal(detalle.precioUnitario),
+            subtotal: new Prisma.Decimal(detalle.subtotalLinea),
+          })),
+        });
       }
 
-      return this.mapPedidoResponse(pedidoActualizado);
-    } catch (error) {
-      this.handleDBError(error);
+      return tx.pedido.findUnique({
+        where: { pedidoId: id },
+        include: PEDIDO_INCLUDE,
+      });
+    });
+
+    if (!pedidoActualizado) {
+      throw new InternalServerErrorException(
+        'No se pudo recuperar el pedido actualizado',
+      );
     }
+
+    return this.mapPedidoResponse(pedidoActualizado);
   }
 
   async changeEstado(id: number, changeEstadoDto: ChangeEstadoPedidoDto) {
@@ -228,19 +219,15 @@ export class PedidosService {
       return this.completePedidoAndUpdateEstado(id);
     }
 
-    try {
-      const pedido = await this.prisma.pedido.update({
-        where: { pedidoId: id },
-        data: {
-          estado: nuevoEstado,
-        },
-        include: PEDIDO_INCLUDE,
-      });
+    const pedido = await this.prisma.pedido.update({
+      where: { pedidoId: id },
+      data: {
+        estado: nuevoEstado,
+      },
+      include: PEDIDO_INCLUDE,
+    });
 
-      return this.mapPedidoResponse(pedido);
-    } catch (error) {
-      this.handleDBError(error);
-    }
+    return this.mapPedidoResponse(pedido);
   }
 
   private async completePedidoAndUpdateEstado(id: number) {
@@ -248,73 +235,69 @@ export class PedidosService {
       include: typeof PEDIDO_INCLUDE;
     }> | null = null;
 
-    try {
-      pedidoCompleto = await this.prisma.$transaction(async (tx) => {
-        const pedido = await tx.pedido.findUnique({
-          where: { pedidoId: id },
-          include: PEDIDO_INCLUDE,
-        });
-
-        if (!pedido) {
-          throw new NotFoundException(`Pedido con ID ${id} no encontrado`);
-        }
-
-        for (const detalle of pedido.detalles) {
-          const inventario = await tx.inventario.findUnique({
-            where: { productoId: detalle.productoId },
-          });
-
-          if (!inventario) {
-            throw new BadRequestException(
-              `El producto ${detalle.producto.nombre} no tiene inventario configurado`,
-            );
-          }
-
-          if (inventario.cantidadActual < detalle.cantidad) {
-            throw new BadRequestException(
-              `Stock insuficiente para ${detalle.producto.nombre}. Disponible: ${inventario.cantidadActual}, Solicitado: ${detalle.cantidad}`,
-            );
-          }
-        }
-
-        for (const detalle of pedido.detalles) {
-          await tx.inventario.update({
-            where: { productoId: detalle.productoId },
-            data: {
-              cantidadActual: {
-                decrement: detalle.cantidad,
-              },
-            },
-          });
-
-          const producto = await tx.producto.findUnique({
-            where: { productoId: detalle.productoId },
-            select: { costoUnitario: true },
-          });
-
-          await tx.movimientoInventario.create({
-            data: {
-              productoId: detalle.productoId,
-              tipo: 'SALIDA',
-              cantidad: detalle.cantidad,
-              documentoReferenciaId: pedido.pedidoId,
-              origenMovimiento: 'PEDIDO',
-              costoUnitario: producto?.costoUnitario ?? new Prisma.Decimal(0),
-            },
-          });
-        }
-
-        return tx.pedido.update({
-          where: { pedidoId: id },
-          data: {
-            estado: 'COMPLETADO',
-          },
-          include: PEDIDO_INCLUDE,
-        });
+    pedidoCompleto = await this.prisma.$transaction(async (tx) => {
+      const pedido = await tx.pedido.findUnique({
+        where: { pedidoId: id },
+        include: PEDIDO_INCLUDE,
       });
-    } catch (error) {
-      this.handleDBError(error);
-    }
+
+      if (!pedido) {
+        throw new NotFoundException(`Pedido con ID ${id} no encontrado`);
+      }
+
+      for (const detalle of pedido.detalles) {
+        const inventario = await tx.inventario.findUnique({
+          where: { productoId: detalle.productoId },
+        });
+
+        if (!inventario) {
+          throw new BadRequestException(
+            `El producto ${detalle.producto.nombre} no tiene inventario configurado`,
+          );
+        }
+
+        if (inventario.cantidadActual < detalle.cantidad) {
+          throw new BadRequestException(
+            `Stock insuficiente para ${detalle.producto.nombre}. Disponible: ${inventario.cantidadActual}, Solicitado: ${detalle.cantidad}`,
+          );
+        }
+      }
+
+      for (const detalle of pedido.detalles) {
+        await tx.inventario.update({
+          where: { productoId: detalle.productoId },
+          data: {
+            cantidadActual: {
+              decrement: detalle.cantidad,
+            },
+          },
+        });
+
+        const producto = await tx.producto.findUnique({
+          where: { productoId: detalle.productoId },
+          select: { costoUnitario: true },
+        });
+
+        await tx.movimientoInventario.create({
+          data: {
+            productoId: detalle.productoId,
+            tipo: 'SALIDA',
+            cantidad: detalle.cantidad,
+            documentoReferenciaId: pedido.pedidoId,
+            origenMovimiento: 'PEDIDO',
+            costoUnitario: producto?.costoUnitario ?? new Prisma.Decimal(0),
+          },
+        });
+      }
+
+      return tx.pedido.update({
+        where: { pedidoId: id },
+        data: {
+          estado: 'COMPLETADO',
+        },
+        include: PEDIDO_INCLUDE,
+      });
+    });
 
     if (!pedidoCompleto) {
       throw new InternalServerErrorException(
@@ -473,29 +456,5 @@ export class PedidosService {
       fechaModificacion: pedido.fechaActualizacion,
       detalles,
     };
-  }
-
-  private handleDBError(error: unknown): never {
-    if (
-      error instanceof NotFoundException ||
-      error instanceof BadRequestException ||
-      error instanceof InternalServerErrorException
-    ) {
-      throw error;
-    }
-
-    if (error instanceof Prisma.PrismaClientKnownRequestError) {
-      if (error.code === 'P2025') {
-        throw new NotFoundException('Registro no encontrado.');
-      }
-
-      if (error.code === 'P2003') {
-        throw new BadRequestException(
-          'Error de llave foranea en la base de datos.',
-        );
-      }
-    }
-
-    throw new InternalServerErrorException('Database error');
   }
 }

@@ -14,7 +14,7 @@ export class LoginUserDto {
   })
   @IsString()
   @IsEmail()
-  correoElectronico: string;
+  correoElectronico!: string;
 
   @ApiProperty({
     description:
@@ -28,5 +28,5 @@ export class LoginUserDto {
     message:
       'The password must have a Uppercase, lowercase letter and a number',
   })
-  clave: string;
+  clave!: string;
 }

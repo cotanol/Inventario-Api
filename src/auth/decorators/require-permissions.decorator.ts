@@ -1,5 +1,6 @@
 import { applyDecorators, UseGuards } from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
+import { ApiBearerAuth } from '@nestjs/swagger';
 import { UserPermissionGuard } from '../guards/user-permission.guard';
 import { PermissionProtected } from './permission-protected.decorator';
 import { ValidPermissions } from '../interfaces/valid-permissions.interface';

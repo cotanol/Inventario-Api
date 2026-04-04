@@ -10,7 +10,7 @@ export class CreateMarcaDto {
   @IsString()
   @IsNotEmpty()
   @MaxLength(50)
-  nombre: string;
+  nombre!: string;
 
   @IsBoolean()
   @IsOptional()
