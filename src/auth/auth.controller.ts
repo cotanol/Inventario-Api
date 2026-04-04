@@ -16,7 +16,6 @@ import { GetUser } from './decorators/get-user.decorator';
 import { ValidPermissions } from './interfaces/valid-permissions.interface';
 import { RequirePermissions } from './decorators/require-permissions.decorator';
 import {
-  ApiBearerAuth,
   ApiOperation,
   ApiResponse,
   ApiTags,
@@ -45,7 +44,6 @@ export class AuthController {
     description:
       'Este endpoint permite a un administrador crear un nuevo usuario en el sistema. La contraseña debe cumplir con los requisitos de seguridad.',
   })
-  @ApiBearerAuth()
   @ApiResponse({
     status: 201,
     description: 'Usuario creado exitosamente. Devuelve el usuario y el token.',
@@ -93,7 +91,6 @@ export class AuthController {
     description:
       'Permite validar el token JWT actual. Si el token es válido, devuelve los datos del usuario y un nuevo token refrescado.',
   })
-  @ApiBearerAuth()
   @ApiResponse({
     status: 200,
     description: 'Token válido. Devuelve el usuario y un nuevo token.',
@@ -121,7 +118,6 @@ export class AuthController {
     description:
       'Devuelve la estructura jerárquica del menú de navegación basada en los perfiles asignados al usuario autenticado.',
   })
-  @ApiBearerAuth()
   @ApiResponse({ status: 200, description: 'Menú generado exitosamente.' })
   @ApiResponse({
     status: 403,
@@ -143,7 +139,6 @@ export class AuthController {
     description:
       'Devuelve una lista de todos los perfiles que se pueden asignar a los usuarios. Requiere rol de administrador.',
   })
-  @ApiBearerAuth()
   @ApiResponse({ status: 200, description: 'Lista de perfiles obtenida.' })
   @ApiResponse({
     status: 403,
@@ -163,7 +158,6 @@ export class AuthController {
     description:
       'Devuelve una lista de todos los usuarios registrados, incluyendo sus perfiles. Requiere rol de administrador.',
   })
-  @ApiBearerAuth()
   @ApiResponse({ status: 200, description: 'Lista de usuarios obtenida.' })
   @ApiResponse({
     status: 403,
@@ -185,7 +179,6 @@ export class AuthController {
     description:
       'Permite activar o desactivar la cuenta de un usuario existente. Requiere rol de administrador.',
   })
-  @ApiBearerAuth()
   @ApiResponse({ status: 200, description: 'Estado del usuario actualizado.' })
   @ApiResponse({
     status: 400,
@@ -220,7 +213,6 @@ export class AuthController {
     description:
       'Permite obtener los datos de un usuario específico utilizando su ID. Requiere rol de administrador.',
   })
-  @ApiBearerAuth()
   @ApiResponse({
     status: 200,
     description: 'Usuario encontrado y datos devueltos correctamente.',
@@ -247,7 +239,6 @@ export class AuthController {
     description:
       'Permite modificar los datos de un usuario existente, incluyendo sus perfiles. Requiere rol de administrador.',
   })
-  @ApiBearerAuth()
   @ApiResponse({
     status: 200,
     description: 'Usuario actualizado correctamente.',

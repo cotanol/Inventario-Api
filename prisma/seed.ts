@@ -82,7 +82,6 @@ async function insertUsuarios() {
     await prisma.usuario.create({
       data: {
         usuarioId: usuario.usuarioId,
-        dni: usuario.dni,
         nombre: usuario.nombres,
         apellido: [usuario.apellidoPaterno, usuario.apellidoMaterno]
           .filter((value): value is string => Boolean(value))
@@ -110,6 +109,7 @@ async function insertPermisos() {
     data: initialData.permisos.map((permiso) => ({
       permisoId: permiso.permisoId,
       nombre: permiso.nombre,
+      keyPermiso: permiso.keyPermiso,
       tipo: permiso.tipoPermiso,
       ruta: permiso.urlMenu,
       descripcion: permiso.descripcion,

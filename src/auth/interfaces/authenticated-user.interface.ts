@@ -1,6 +1,7 @@
 export interface AuthenticatedPermiso {
   permisoId: number;
   nombre: string;
+  keyPermiso: string | null;
   descripcion: string | null;
   tipoPermiso: 'MENU' | 'ACCION';
   urlMenu: string | null;
@@ -20,11 +21,9 @@ export interface AuthenticatedPerfil {
 
 export interface AuthenticatedUser {
   usuarioId: number;
-  dni: string;
   nombres: string;
   apellidoPaterno: string;
   apellidoMaterno: string | null;
-  celular: string | null;
   correoElectronico: string;
   estadoRegistro: boolean;
   fechaCreacion: Date;

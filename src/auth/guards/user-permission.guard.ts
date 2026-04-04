@@ -38,8 +38,8 @@ export class UserPermissionGuard implements CanActivate {
     const userPermissions = new Set<string>();
     user.perfilesLink?.forEach((userProfile) => {
       userProfile.permisosLink?.forEach((permisoLink) => {
-        if (permisoLink.estadoRegistro && permisoLink.nombre) {
-          userPermissions.add(this.toPermissionKey(permisoLink.nombre));
+        if (permisoLink.estadoRegistro && permisoLink.keyPermiso) {
+          userPermissions.add(permisoLink.keyPermiso);
         }
       });
     });
@@ -52,14 +52,5 @@ export class UserPermissionGuard implements CanActivate {
     throw new ForbiddenException(
       `User ${user.nombres + ' ' + user.apellidoPaterno} needs one of these permissions: [${validPermissions.join(', ')}]`,
     );
-  }
-
-  private toPermissionKey(value: string): string {
-    return value
-      .normalize('NFD')
-      .replace(/[\u0300-\u036f]/g, '')
-      .replace(/[^a-zA-Z0-9]+/g, '_')
-      .replace(/^_+|_+$/g, '')
-      .toUpperCase();
   }
 }

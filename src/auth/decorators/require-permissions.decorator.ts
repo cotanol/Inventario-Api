@@ -24,5 +24,6 @@ export function RequirePermissions(...permissions: ValidPermissions[]) {
   return applyDecorators(
     PermissionProtected(...permissions),
     UseGuards(AuthGuard(), UserPermissionGuard),
+    ApiBearerAuth(),
   );
 }

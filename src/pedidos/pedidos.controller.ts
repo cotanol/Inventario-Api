@@ -10,6 +10,8 @@ import {
 } from '@nestjs/common';
 import { PedidosService } from './pedidos.service';
 import { CreatePedidoDto, ChangeEstadoPedidoDto, UpdatePedidoDto } from './dto';
+import { RequirePermissions } from 'src/auth/decorators/require-permissions.decorator';
+import { ValidPermissions } from 'src/auth/interfaces/valid-permissions.interface';
 import { PaginationQueryDto } from 'src/common/dto/pagination-query.dto';
 import {
   ApiPaginationQueryDocs,
@@ -23,8 +25,7 @@ export class PedidosController {
   constructor(private readonly pedidosService: PedidosService) {}
 
   @Post()
-  // TODO: Agregar el permiso cuando se cree en el seed
-  // @RequirePermissions(ValidPermissions.CREAR_PEDIDO)
+  @RequirePermissions(ValidPermissions.CREAR_PEDIDO)
   @ApiStandardItemResponse('Pedido creado correctamente', 'created', {
     dataExample: swaggerExamples.pedido,
   })
@@ -33,8 +34,7 @@ export class PedidosController {
   }
 
   @Get()
-  // TODO: Agregar el permiso cuando se cree en el seed
-  // @RequirePermissions(ValidPermissions.VER_PEDIDOS)
+  @RequirePermissions(ValidPermissions.VER_PEDIDOS)
   @ApiPaginationQueryDocs()
   @ApiStandardListResponse('Lista paginada de pedidos', swaggerExamples.pedido)
   findAll(@Query() paginationQuery: PaginationQueryDto) {
@@ -42,8 +42,7 @@ export class PedidosController {
   }
 
   @Get(':id')
-  // TODO: Agregar el permiso cuando se cree en el seed
-  // @RequirePermissions(ValidPermissions.VER_PEDIDOS)
+  @RequirePermissions(ValidPermissions.VER_PEDIDOS)
   @ApiStandardItemResponse('Pedido obtenido correctamente', 'ok', {
     dataExample: swaggerExamples.pedido,
   })
@@ -52,8 +51,7 @@ export class PedidosController {
   }
 
   @Patch(':id')
-  // TODO: Agregar el permiso cuando se cree en el seed
-  // @RequirePermissions(ValidPermissions.EDITAR_PEDIDO)
+  @RequirePermissions(ValidPermissions.EDITAR_PEDIDO)
   @ApiStandardItemResponse('Pedido actualizado correctamente', 'ok', {
     dataExample: swaggerExamples.pedido,
   })
@@ -65,8 +63,7 @@ export class PedidosController {
   }
 
   @Patch(':id/change-estado')
-  // TODO: Agregar el permiso cuando se cree en el seed
-  // @RequirePermissions(ValidPermissions.EDITAR_PEDIDO)
+  @RequirePermissions(ValidPermissions.EDITAR_PEDIDO)
   @ApiStandardItemResponse('Estado de pedido actualizado correctamente', 'ok', {
     dataExample: swaggerExamples.pedido,
   })

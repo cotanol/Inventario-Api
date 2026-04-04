@@ -12,6 +12,8 @@ import {
 import { ProveedoresService } from './proveedores.service';
 import { CreateProveedorDto } from './dto/create-proveedor.dto';
 import { UpdateProveedorDto } from './dto/update-proveedor.dto';
+import { RequirePermissions } from 'src/auth/decorators/require-permissions.decorator';
+import { ValidPermissions } from 'src/auth/interfaces/valid-permissions.interface';
 import { PaginationQueryDto } from 'src/common/dto/pagination-query.dto';
 import {
   ApiPaginationQueryDocs,
@@ -25,6 +27,7 @@ export class ProveedoresController {
   constructor(private readonly proveedoresService: ProveedoresService) {}
 
   @Post()
+  @RequirePermissions(ValidPermissions.CREAR_PROVEEDOR)
   @ApiStandardItemResponse('Proveedor creado correctamente', 'created', {
     dataExample: swaggerExamples.proveedor,
   })
@@ -33,6 +36,7 @@ export class ProveedoresController {
   }
 
   @Get()
+  @RequirePermissions(ValidPermissions.VER_PROVEEDORES)
   @ApiPaginationQueryDocs()
   @ApiStandardListResponse(
     'Lista paginada de proveedores',
@@ -43,6 +47,7 @@ export class ProveedoresController {
   }
 
   @Get(':id')
+  @RequirePermissions(ValidPermissions.VER_PROVEEDORES)
   @ApiStandardItemResponse('Proveedor obtenido correctamente', 'ok', {
     dataExample: swaggerExamples.proveedor,
   })
@@ -51,6 +56,7 @@ export class ProveedoresController {
   }
 
   @Patch(':id')
+  @RequirePermissions(ValidPermissions.EDITAR_PROVEEDOR)
   @ApiStandardItemResponse('Proveedor actualizado correctamente', 'ok', {
     dataExample: swaggerExamples.proveedor,
   })
@@ -62,6 +68,7 @@ export class ProveedoresController {
   }
 
   @Delete(':id')
+  @RequirePermissions(ValidPermissions.ELIMINAR_PROVEEDOR)
   @ApiStandardItemResponse('Proveedor eliminado correctamente', 'ok', {
     dataExample: swaggerExamples.statusMessage,
   })

@@ -51,14 +51,6 @@ export class CreateUserDto {
   @MinLength(1)
   apellidoPaterno!: string;
 
-  @ApiProperty({
-    description: 'Documento Nacional de Identidad del usuario',
-    example: '71234567',
-  })
-  @IsString()
-  @MinLength(8)
-  @MaxLength(15)
-  dni!: string;
 
   @ApiProperty({
     description: 'Apellido materno del usuario (opcional)',
@@ -70,15 +62,7 @@ export class CreateUserDto {
   @MinLength(1)
   apellidoMaterno?: string;
 
-  @ApiProperty({
-    description: 'Número de celular del usuario (opcional)',
-    example: '987654321',
-    required: false,
-  })
-  @IsOptional()
-  @IsString()
-  @MinLength(1)
-  celular?: string;
+
 
   @ApiProperty({
     description:

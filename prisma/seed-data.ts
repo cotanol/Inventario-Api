@@ -6,7 +6,6 @@ interface SeedUsuario {
   nombres: string;
   apellidoPaterno: string;
   apellidoMaterno?: string;
-  dni: string;
   celular?: string;
   correoElectronico: string;
   clave: string;
@@ -113,13 +112,35 @@ const crearVendedorId = 38;
 const editarVendedorId = 39;
 const eliminarVendedorId = 40;
 
+// === IDs PERMISOS - MENÚS NUEVOS ===
+const menuProveedoresId = 41;
+const menuComprasId = 42;
+const menuPedidosId = 43;
+
+// === IDs PERMISOS - ACCIONES DE PROVEEDORES ===
+const verProveedoresId = 44;
+const crearProveedorId = 45;
+const editarProveedorId = 46;
+const eliminarProveedorId = 47;
+
+// === IDs PERMISOS - ACCIONES DE COMPRAS ===
+const verComprasId = 48;
+const crearCompraId = 49;
+const editarCompraId = 50;
+const eliminarCompraId = 51;
+
+// === IDs PERMISOS - ACCIONES DE PEDIDOS ===
+const verPedidosId = 52;
+const crearPedidoId = 53;
+const editarPedidoId = 54;
+const eliminarPedidoId = 55;
+
 export const initialData: SeedData = {
   usuarios: [
     {
       usuarioId: user1Id,
       nombres: 'Carlos',
       apellidoPaterno: 'Rodriguez',
-      dni: '99999999',
       correoElectronico: 'admin@dym.com',
       clave: 'admin@123A',
     },
@@ -128,7 +149,6 @@ export const initialData: SeedData = {
       nombres: 'Maria',
       apellidoPaterno: 'Gonzalez',
       apellidoMaterno: 'Lopez',
-      dni: '88888888',
       celular: '987654321',
       correoElectronico: 'vendedor@dym.com',
       clave: 'vendedor@123A',
@@ -484,6 +504,134 @@ export const initialData: SeedData = {
       permisoPadreId: menuVendedoresId,
       descripcion: 'Permite eliminar vendedores',
     },
+
+    // ========== MENÚS NUEVOS ==========
+    {
+      permisoId: menuProveedoresId,
+      keyPermiso: 'MENU_PROVEEDORES',
+      nombre: 'Proveedores',
+      tipoPermiso: TipoPermiso.MENU,
+      urlMenu: '/proveedores',
+      descripcion: 'Gestión de proveedores',
+    },
+    {
+      permisoId: menuComprasId,
+      keyPermiso: 'MENU_COMPRAS',
+      nombre: 'Compras',
+      tipoPermiso: TipoPermiso.MENU,
+      urlMenu: '/compras',
+      descripcion: 'Gestión de compras',
+    },
+    {
+      permisoId: menuPedidosId,
+      keyPermiso: 'MENU_PEDIDOS',
+      nombre: 'Pedidos',
+      tipoPermiso: TipoPermiso.MENU,
+      urlMenu: '/pedidos',
+      descripcion: 'Gestión de pedidos',
+    },
+
+    // ========== ACCIONES DE PROVEEDORES ==========
+    {
+      permisoId: verProveedoresId,
+      keyPermiso: ValidPermissions.VER_PROVEEDORES,
+      nombre: 'Ver Proveedores',
+      tipoPermiso: TipoPermiso.ACCION,
+      permisoPadreId: menuProveedoresId,
+      descripcion: 'Permite visualizar la lista de proveedores',
+    },
+    {
+      permisoId: crearProveedorId,
+      keyPermiso: ValidPermissions.CREAR_PROVEEDOR,
+      nombre: 'Crear Proveedor',
+      tipoPermiso: TipoPermiso.ACCION,
+      permisoPadreId: menuProveedoresId,
+      descripcion: 'Permite crear nuevos proveedores',
+    },
+    {
+      permisoId: editarProveedorId,
+      keyPermiso: ValidPermissions.EDITAR_PROVEEDOR,
+      nombre: 'Editar Proveedor',
+      tipoPermiso: TipoPermiso.ACCION,
+      permisoPadreId: menuProveedoresId,
+      descripcion: 'Permite modificar proveedores existentes',
+    },
+    {
+      permisoId: eliminarProveedorId,
+      keyPermiso: ValidPermissions.ELIMINAR_PROVEEDOR,
+      nombre: 'Eliminar Proveedor',
+      tipoPermiso: TipoPermiso.ACCION,
+      permisoPadreId: menuProveedoresId,
+      descripcion: 'Permite eliminar proveedores',
+    },
+
+    // ========== ACCIONES DE COMPRAS ==========
+    {
+      permisoId: verComprasId,
+      keyPermiso: ValidPermissions.VER_COMPRAS,
+      nombre: 'Ver Compras',
+      tipoPermiso: TipoPermiso.ACCION,
+      permisoPadreId: menuComprasId,
+      descripcion: 'Permite visualizar la lista de compras',
+    },
+    {
+      permisoId: crearCompraId,
+      keyPermiso: ValidPermissions.CREAR_COMPRA,
+      nombre: 'Crear Compra',
+      tipoPermiso: TipoPermiso.ACCION,
+      permisoPadreId: menuComprasId,
+      descripcion: 'Permite crear nuevas compras',
+    },
+    {
+      permisoId: editarCompraId,
+      keyPermiso: ValidPermissions.EDITAR_COMPRA,
+      nombre: 'Editar Compra',
+      tipoPermiso: TipoPermiso.ACCION,
+      permisoPadreId: menuComprasId,
+      descripcion: 'Permite modificar compras existentes',
+    },
+    {
+      permisoId: eliminarCompraId,
+      keyPermiso: ValidPermissions.ELIMINAR_COMPRA,
+      nombre: 'Eliminar Compra',
+      tipoPermiso: TipoPermiso.ACCION,
+      permisoPadreId: menuComprasId,
+      descripcion: 'Permite eliminar compras',
+    },
+
+    // ========== ACCIONES DE PEDIDOS ==========
+    {
+      permisoId: verPedidosId,
+      keyPermiso: ValidPermissions.VER_PEDIDOS,
+      nombre: 'Ver Pedidos',
+      tipoPermiso: TipoPermiso.ACCION,
+      permisoPadreId: menuPedidosId,
+      descripcion: 'Permite visualizar la lista de pedidos',
+    },
+    {
+      permisoId: crearPedidoId,
+      keyPermiso: ValidPermissions.CREAR_PEDIDO,
+      nombre: 'Crear Pedido',
+      tipoPermiso: TipoPermiso.ACCION,
+      permisoPadreId: menuPedidosId,
+      descripcion: 'Permite crear nuevos pedidos',
+    },
+    {
+      permisoId: editarPedidoId,
+      keyPermiso: ValidPermissions.EDITAR_PEDIDO,
+      nombre: 'Editar Pedido',
+      tipoPermiso: TipoPermiso.ACCION,
+      permisoPadreId: menuPedidosId,
+      descripcion: 'Permite modificar pedidos existentes',
+    },
+    {
+      permisoId: eliminarPedidoId,
+      keyPermiso: ValidPermissions.ELIMINAR_PEDIDO,
+      nombre: 'Eliminar Pedido',
+      tipoPermiso: TipoPermiso.ACCION,
+      permisoPadreId: menuPedidosId,
+      descripcion: 'Permite eliminar pedidos',
+    },
   ],
   usuariosPerfiles: [
     { usuarioId: user1Id, perfilId: perfilAdminId },
@@ -548,6 +696,29 @@ export const initialData: SeedData = {
     { permisoId: crearVendedorId, perfilId: perfilAdminId, orden: 82 },
     { permisoId: editarVendedorId, perfilId: perfilAdminId, orden: 83 },
     { permisoId: eliminarVendedorId, perfilId: perfilAdminId, orden: 84 },
+
+    // Menús de Proveedores, Compras, Pedidos
+    { permisoId: menuProveedoresId, perfilId: perfilAdminId, orden: 90 },
+    { permisoId: menuComprasId, perfilId: perfilAdminId, orden: 100 },
+    { permisoId: menuPedidosId, perfilId: perfilAdminId, orden: 110 },
+
+    // Acciones de Proveedores
+    { permisoId: verProveedoresId, perfilId: perfilAdminId, orden: 91 },
+    { permisoId: crearProveedorId, perfilId: perfilAdminId, orden: 92 },
+    { permisoId: editarProveedorId, perfilId: perfilAdminId, orden: 93 },
+    { permisoId: eliminarProveedorId, perfilId: perfilAdminId, orden: 94 },
+
+    // Acciones de Compras
+    { permisoId: verComprasId, perfilId: perfilAdminId, orden: 101 },
+    { permisoId: crearCompraId, perfilId: perfilAdminId, orden: 102 },
+    { permisoId: editarCompraId, perfilId: perfilAdminId, orden: 103 },
+    { permisoId: eliminarCompraId, perfilId: perfilAdminId, orden: 104 },
+
+    // Acciones de Pedidos
+    { permisoId: verPedidosId, perfilId: perfilAdminId, orden: 111 },
+    { permisoId: crearPedidoId, perfilId: perfilAdminId, orden: 112 },
+    { permisoId: editarPedidoId, perfilId: perfilAdminId, orden: 113 },
+    { permisoId: eliminarPedidoId, perfilId: perfilAdminId, orden: 114 },
 
     // ========== PERFIL VENDEDOR (SOLO CLIENTES) ==========
     { permisoId: menuClientesId, perfilId: perfilVendedorId, orden: 10 },

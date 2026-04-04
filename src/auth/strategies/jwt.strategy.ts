@@ -51,11 +51,9 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
 
     return {
       usuarioId: user.usuarioId,
-      dni: user.dni,
       nombres: user.nombre,
       apellidoPaterno: user.apellido,
       apellidoMaterno: null,
-      celular: null,
       correoElectronico: user.email,
       estadoRegistro: user.estadoRegistro,
       fechaCreacion: user.fechaCreacion,
@@ -68,6 +66,7 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
         permisosLink: perfilLink.perfil.permisos.map((permisoLink) => ({
           permisoId: permisoLink.permiso.permisoId,
           nombre: permisoLink.permiso.nombre,
+          keyPermiso: permisoLink.permiso.keyPermiso,
           descripcion: permisoLink.permiso.descripcion,
           tipoPermiso: permisoLink.permiso.tipo,
           urlMenu: permisoLink.permiso.ruta,

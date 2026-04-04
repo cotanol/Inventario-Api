@@ -76,7 +76,6 @@ export class AuthService {
     const createdUser = await this.prisma.$transaction(async (tx) => {
       const user = await tx.usuario.create({
         data: {
-          dni: userData.dni,
           nombre: userData.nombres,
           apellido: this.joinApellidos(
             userData.apellidoPaterno,
@@ -129,6 +128,10 @@ export class AuthService {
 
     const isPasswordValid = await bcrypt.compare(clave, user.password);
     if (!isPasswordValid) {
+      throw new UnauthorizedException('Invalid credentials');
+    }
+
+    if (!user.estadoRegistro) {
       throw new UnauthorizedException('Invalid credentials');
     }
 
@@ -586,20 +589,20 @@ export class AuthService {
       for (const permisoLink of userProfile.perfil.permisos) {
         if (
           permisoLink.permiso.estadoRegistro &&
-          permisoLink.permiso.tipo === 'ACCION'
+          permisoLink.permiso.tipo === 'ACCION' &&
+          permisoLink.permiso.keyPermiso
         ) {
-          permisosSet.add(this.toPermissionKey(permisoLink.permiso.nombre));
+          permisosSet.add(permisoLink.permiso.keyPermiso);
         }
       }
     }
 
     return {
       usuarioId: user.usuarioId,
-      dni: user.dni,
       nombres: user.nombre,
       apellidoPaterno: apellidos.apellidoPaterno,
       apellidoMaterno: apellidos.apellidoMaterno,
-      celular: null,
+
       correoElectronico: user.email,
       estadoRegistro: user.estadoRegistro,
       fechaCreacion: user.fechaCreacion,
@@ -673,7 +676,6 @@ export class AuthService {
       userDataToUpdate.apellidoMaterno ?? currentApellidos.apellidoMaterno;
 
     return {
-      dni: userDataToUpdate.dni,
       nombre: userDataToUpdate.nombres,
       apellido:
         userDataToUpdate.apellidoPaterno !== undefined ||
@@ -688,7 +690,6 @@ export class AuthService {
 
   private hasPrismaUserUpdateData(data: Prisma.UsuarioUpdateInput): boolean {
     return (
-      data.dni !== undefined ||
       data.nombre !== undefined ||
       data.apellido !== undefined ||
       data.email !== undefined
@@ -699,12 +700,4 @@ export class AuthService {
     return this.jwtService.sign(payload);
   }
 
-  private toPermissionKey(value: string): string {
-    return value
-      .normalize('NFD')
-      .replace(/[\u0300-\u036f]/g, '')
-      .replace(/[^a-zA-Z0-9]+/g, '_')
-      .replace(/^_+|_+$/g, '')
-      .toUpperCase();
-  }
 }
