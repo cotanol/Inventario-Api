@@ -27,4 +27,4 @@ COPY --from=builder /app/prisma.config.ts ./prisma.config.ts
 EXPOSE 4000
 
 # Ejecutar migraciones y luego iniciar la aplicación
-CMD ["sh", "-c", "npm run migration:deploy && node dist/main"]
+CMD ["sh", "-c", "npm run migration:deploy && npm run start:prod"]
