@@ -13,12 +13,12 @@ datasource db {
 // ========================
 
 model Usuario {
-  usuarioId      Int     @id @default(autoincrement()) @map("usuario_id")
-  nombre         String  @db.VarChar(100)
-  apellido       String  @db.VarChar(100)
-  email          String  @unique @db.VarChar(150)
-  password       String  @db.VarChar(255)
-  estadoRegistro Boolean @default(true) @map("estado_registro")
+  usuarioId         Int     @id @default(autoincrement()) @map("usuario_id")
+  nombre            String  @db.VarChar(100)
+  apellido          String  @db.VarChar(100)
+  correoElectronico String  @unique @db.VarChar(150)
+  clave             String  @db.VarChar(255)
+  estadoRegistro    Boolean @default(true) @map("estado_registro")
 
   rolId Int @map("rol_id")
   rol   Rol @relation(fields: [rolId], references: [rolId])
@@ -44,16 +44,16 @@ enum PermisoModulo {
 }
 
 model Rol {
-  rolId          Int            @id @default(autoincrement()) @map("rol_id")
-  nombre         String         @unique @db.VarChar(50)
-  descripcion    String?        @db.VarChar(255)
-  permisos       PermisoModulo[]
+  rolId          Int     @id @default(autoincrement()) @map("rol_id")
+  nombre         String  @unique @db.VarChar(50)
+  descripcion    String? @db.VarChar(255)
   estadoRegistro Boolean @default(true) @map("estado_registro")
+
+  usuarios Usuario[]
+  permisos PermisoModulo[]
 
   fechaCreacion      DateTime @default(now()) @map("fecha_creacion")
   fechaActualizacion DateTime @updatedAt @map("fecha_actualizacion")
-
-  usuarios Usuario[]
 
   @@map("rol")
 }
@@ -63,58 +63,59 @@ model Rol {
 // ========================
 
 model Linea {
-  lineaId            Int      @id @default(autoincrement()) @map("linea_id")
-  nombre             String   @unique @db.VarChar(100)
-  descripcion        String?  @db.VarChar(255)
-  estadoRegistro     Boolean  @default(true) @map("estado_registro")
-  fechaCreacion      DateTime @default(now()) @map("fecha_creacion")
-  fechaActualizacion DateTime @updatedAt @map("fecha_actualizacion")
+  lineaId        Int     @id @default(autoincrement()) @map("linea_id")
+  nombre         String  @unique @db.VarChar(100)
+  descripcion    String? @db.VarChar(255)
+  estadoRegistro Boolean @default(true) @map("estado_registro")
 
   grupos Grupo[]
+
+  fechaCreacion      DateTime @default(now()) @map("fecha_creacion")
+  fechaActualizacion DateTime @updatedAt @map("fecha_actualizacion")
 
   @@map("linea")
 }
 
 model Grupo {
-  grupoId            Int      @id @default(autoincrement()) @map("grupo_id")
-  nombre             String   @db.VarChar(100)
-  descripcion        String?  @db.VarChar(255)
-  estadoRegistro     Boolean  @default(true) @map("estado_registro")
-  fechaCreacion      DateTime @default(now()) @map("fecha_creacion")
-  fechaActualizacion DateTime @updatedAt @map("fecha_actualizacion")
+  grupoId        Int     @id @default(autoincrement()) @map("grupo_id")
+  nombre         String  @db.VarChar(100)
+  descripcion    String? @db.VarChar(255)
+  estadoRegistro Boolean @default(true) @map("estado_registro")
 
   lineaId Int   @map("linea_id")
   linea   Linea @relation(fields: [lineaId], references: [lineaId])
 
   productos Producto[]
 
+  fechaCreacion      DateTime @default(now()) @map("fecha_creacion")
+  fechaActualizacion DateTime @updatedAt @map("fecha_actualizacion")
+
   @@map("grupo")
 }
 
 model Marca {
-  marcaId            Int      @id @default(autoincrement()) @map("marca_id")
-  nombre             String   @unique @db.VarChar(100)
-  descripcion        String?  @db.VarChar(255)
-  estadoRegistro     Boolean  @default(true) @map("estado_registro")
-  fechaCreacion      DateTime @default(now()) @map("fecha_creacion")
-  fechaActualizacion DateTime @updatedAt @map("fecha_actualizacion")
+  marcaId        Int     @id @default(autoincrement()) @map("marca_id")
+  nombre         String  @unique @db.VarChar(100)
+  descripcion    String? @db.VarChar(255)
+  estadoRegistro Boolean @default(true) @map("estado_registro")
 
   productos Producto[]
+
+  fechaCreacion      DateTime @default(now()) @map("fecha_creacion")
+  fechaActualizacion DateTime @updatedAt @map("fecha_actualizacion")
 
   @@map("marca")
 }
 
 model Producto {
-  productoId         Int      @id @default(autoincrement()) @map("producto_id")
-  codigo             String?  @unique @db.VarChar(50)
-  nombre             String   @db.VarChar(200)
-  descripcion        String?  @db.Text
-  precioVenta        Decimal  @map("precio_venta") @db.Decimal(12, 2)
-  costoUnitario      Decimal  @default(0) @map("costo_unitario") @db.Decimal(12, 2)
-  unidadMedida       String   @default("UNIDAD") @map("unidad_medida") @db.VarChar(50)
-  estadoRegistro     Boolean  @default(true) @map("estado_registro")
-  fechaCreacion      DateTime @default(now()) @map("fecha_creacion")
-  fechaActualizacion DateTime @updatedAt @map("fecha_actualizacion")
+  productoId     Int     @id @default(autoincrement()) @map("producto_id")
+  codigo         String? @unique @db.VarChar(50)
+  nombre         String  @db.VarChar(200)
+  descripcion    String? @db.Text
+  precioVenta    Decimal @map("precio_venta") @db.Decimal(12, 2)
+  costoUnitario  Decimal @default(0) @map("costo_unitario") @db.Decimal(12, 2)
+  unidadMedida   String  @default("UNIDAD") @map("unidad_medida") @db.VarChar(50)
+  estadoRegistro Boolean @default(true) @map("estado_registro")
 
   grupoId Int   @map("grupo_id")
   grupo   Grupo @relation(fields: [grupoId], references: [grupoId])
@@ -127,6 +128,9 @@ model Producto {
   detallesPedido DetallePedido[]
   detallesCompra DetalleCompra[]
 
+  fechaCreacion      DateTime @default(now()) @map("fecha_creacion")
+  fechaActualizacion DateTime @updatedAt @map("fecha_actualizacion")
+
   @@map("producto")
 }
 
@@ -135,15 +139,16 @@ model Producto {
 // ========================
 
 model Inventario {
-  inventarioId       Int      @id @default(autoincrement()) @map("inventario_id")
-  cantidadActual     Int      @default(0) @map("cantidad_actual")
-  cantidadMinima     Int      @default(0) @map("cantidad_minima")
-  estadoRegistro     Boolean  @default(true) @map("estado_registro")
-  fechaCreacion      DateTime @default(now()) @map("fecha_creacion")
-  fechaActualizacion DateTime @updatedAt @map("fecha_actualizacion")
+  inventarioId   Int     @id @default(autoincrement()) @map("inventario_id")
+  cantidadActual Int     @default(0) @map("cantidad_actual")
+  cantidadMinima Int     @default(0) @map("cantidad_minima")
+  estadoRegistro Boolean @default(true) @map("estado_registro")
 
   productoId Int      @unique @map("producto_id")
   producto   Producto @relation(fields: [productoId], references: [productoId])
+
+  fechaCreacion      DateTime @default(now()) @map("fecha_creacion")
+  fechaActualizacion DateTime @updatedAt @map("fecha_actualizacion")
 
   @@map("inventario")
 }
@@ -167,10 +172,12 @@ model MovimientoInventario {
   documentoReferenciaId Int?                     @map("documento_referencia_id")
   origenMovimiento      OrigenMovimiento         @map("origen_movimiento")
   observacion           String?                  @db.Text
-  fechaCreacion         DateTime                 @default(now()) @map("fecha_creacion")
 
   productoId Int      @map("producto_id")
   producto   Producto @relation(fields: [productoId], references: [productoId])
+
+  fechaCreacion      DateTime @default(now()) @map("fecha_creacion")
+  fechaActualizacion DateTime @updatedAt @map("fecha_actualizacion")
 
   @@index([documentoReferenciaId, origenMovimiento])
   @@map("movimiento_inventario")
@@ -181,18 +188,19 @@ model MovimientoInventario {
 // ========================
 
 model Vendedor {
-  vendedorId        Int       @id @default(autoincrement()) @map("vendedor_id")
-  nombres           String    @db.VarChar(50)
-  apellidoPaterno   String    @map("apellido_paterno") @db.VarChar(50)
-  apellidoMaterno   String?   @map("apellido_materno") @db.VarChar(50)
-  dni               String    @unique @db.VarChar(8)
-  correo            String    @unique @db.VarChar(100)
-  estadoRegistro    Boolean   @default(true) @map("estado_registro")
-  fechaCreacion     DateTime  @default(now()) @map("fecha_creacion")
-  fechaModificacion DateTime? @updatedAt @map("fecha_modificacion")
+  vendedorId      Int     @id @default(autoincrement()) @map("vendedor_id")
+  nombres         String  @db.VarChar(50)
+  apellidoPaterno String  @map("apellido_paterno") @db.VarChar(50)
+  apellidoMaterno String? @map("apellido_materno") @db.VarChar(50)
+  dni             String  @unique @db.VarChar(8)
+  correo          String  @unique @db.VarChar(100)
+  estadoRegistro  Boolean @default(true) @map("estado_registro")
 
   clientes Cliente[]
   pedidos  Pedido[]
+
+  fechaCreacion      DateTime @default(now()) @map("fecha_creacion")
+  fechaActualizacion DateTime @updatedAt @map("fecha_actualizacion")
 
   @@map("vendedores")
 }
@@ -202,24 +210,25 @@ model Vendedor {
 // ========================
 
 model Cliente {
-  clienteId         Int       @id @default(autoincrement()) @map("cliente_id")
-  nombre            String    @db.VarChar(50)
-  ruc               String    @unique @db.VarChar(11)
-  direccion         String    @db.VarChar(50)
-  telefono          String?   @db.VarChar(50)
-  email             String    @unique @db.VarChar(100)
-  clasificacion     String    @db.VarChar(50)
-  departamento      String    @db.VarChar(50)
-  provincia         String    @db.VarChar(50)
-  distrito          String    @db.VarChar(50)
-  estadoRegistro    Boolean   @default(true) @map("estado_registro")
-  fechaCreacion     DateTime  @default(now()) @map("fecha_creacion")
-  fechaModificacion DateTime? @updatedAt @map("fecha_modificacion")
+  clienteId      Int     @id @default(autoincrement()) @map("cliente_id")
+  nombre         String  @db.VarChar(50)
+  ruc            String  @unique @db.VarChar(11)
+  direccion      String  @db.VarChar(50)
+  telefono       String? @db.VarChar(50)
+  email          String  @unique @db.VarChar(100)
+  clasificacion  String  @db.VarChar(50)
+  departamento   String  @db.VarChar(50)
+  provincia      String  @db.VarChar(50)
+  distrito       String  @db.VarChar(50)
+  estadoRegistro Boolean @default(true) @map("estado_registro")
 
   vendedorId Int      @map("vendedor_id")
   vendedor   Vendedor @relation(fields: [vendedorId], references: [vendedorId])
 
   pedidos Pedido[]
+
+  fechaCreacion      DateTime @default(now()) @map("fecha_creacion")
+  fechaActualizacion DateTime @updatedAt @map("fecha_actualizacion")
 
   @@map("clientes")
 }
@@ -229,19 +238,20 @@ model Cliente {
 // ========================
 
 model Proveedor {
-  proveedorId                Int       @id @default(autoincrement()) @map("proveedor_id")
-  nombreEmpresa              String    @map("nombre_empresa") @db.VarChar(100)
-  contactoNombre             String?   @map("contacto_nombre") @db.VarChar(100)
-  telefono                   String?   @db.VarChar(20)
-  email                      String?   @db.VarChar(100)
-  numeroIdentificacionFiscal String    @unique @map("numero_identificacion_fiscal") @db.VarChar(20)
-  direccion                  String?   @db.Text
-  pais                       String    @db.VarChar(50)
-  estadoRegistro             Boolean   @default(true) @map("estado_registro")
-  fechaCreacion              DateTime  @default(now()) @map("fecha_creacion")
-  fechaModificacion          DateTime? @updatedAt @map("fecha_modificacion")
+  proveedorId                Int     @id @default(autoincrement()) @map("proveedor_id")
+  nombreEmpresa              String  @map("nombre_empresa") @db.VarChar(100)
+  contactoNombre             String? @map("contacto_nombre") @db.VarChar(100)
+  telefono                   String? @db.VarChar(20)
+  email                      String? @db.VarChar(100)
+  numeroIdentificacionFiscal String  @unique @map("numero_identificacion_fiscal") @db.VarChar(20)
+  direccion                  String? @db.Text
+  pais                       String  @db.VarChar(50)
+  estadoRegistro             Boolean @default(true) @map("estado_registro")
 
   compras Compra[]
+
+  fechaCreacion      DateTime @default(now()) @map("fecha_creacion")
+  fechaActualizacion DateTime @updatedAt @map("fecha_actualizacion")
 
   @@map("proveedores")
 }
@@ -262,17 +272,15 @@ enum TipoPago {
 }
 
 model Pedido {
-  pedidoId           Int          @id @default(autoincrement()) @map("pedido_id")
-  estado             EstadoPedido @default(PENDIENTE)
-  tipoPago           TipoPago     @default(CONTADO) @map("tipo_pago")
-  subtotal           Decimal      @default(0) @db.Decimal(12, 2)
-  igv                Decimal      @default(0) @db.Decimal(12, 2)
-  total              Decimal      @default(0) @db.Decimal(12, 2)
-  observaciones      String?      @db.Text
-  pdfUrl             String?      @map("pdf_url") @db.VarChar(255)
-  estadoRegistro     Boolean      @default(true) @map("estado_registro")
-  fechaCreacion      DateTime     @default(now()) @map("fecha_creacion")
-  fechaActualizacion DateTime     @updatedAt @map("fecha_actualizacion")
+  pedidoId       Int          @id @default(autoincrement()) @map("pedido_id")
+  estado         EstadoPedido @default(PENDIENTE)
+  tipoPago       TipoPago     @default(CONTADO) @map("tipo_pago")
+  subtotal       Decimal      @default(0) @db.Decimal(12, 2)
+  igv            Decimal      @default(0) @db.Decimal(12, 2)
+  total          Decimal      @default(0) @db.Decimal(12, 2)
+  observaciones  String?      @db.Text
+  pdfUrl         String?      @map("pdf_url") @db.VarChar(255)
+  estadoRegistro Boolean      @default(true) @map("estado_registro")
 
   clienteId Int     @map("cliente_id")
   cliente   Cliente @relation(fields: [clienteId], references: [clienteId])
@@ -281,6 +289,9 @@ model Pedido {
   vendedor   Vendedor @relation(fields: [vendedorId], references: [vendedorId])
 
   detalles DetallePedido[]
+
+  fechaCreacion      DateTime @default(now()) @map("fecha_creacion")
+  fechaActualizacion DateTime @updatedAt @map("fecha_actualizacion")
 
   @@map("pedido")
 }
@@ -296,6 +307,9 @@ model DetallePedido {
 
   productoId Int      @map("producto_id")
   producto   Producto @relation(fields: [productoId], references: [productoId])
+
+  fechaCreacion      DateTime @default(now()) @map("fecha_creacion")
+  fechaActualizacion DateTime @updatedAt @map("fecha_actualizacion")
 
   @@map("detalle_pedido")
 }
@@ -321,13 +335,14 @@ model Compra {
   observaciones        String?      @db.Text
   pdfUrl               String?      @map("pdf_url") @db.VarChar(255)
   estadoRegistro       Boolean      @default(true) @map("estado_registro")
-  fechaCreacion        DateTime     @default(now()) @map("fecha_creacion")
-  fechaActualizacion   DateTime     @updatedAt @map("fecha_actualizacion")
 
   proveedorId Int       @map("proveedor_id")
   proveedor   Proveedor @relation(fields: [proveedorId], references: [proveedorId])
 
   detalles DetalleCompra[]
+
+  fechaCreacion      DateTime @default(now()) @map("fecha_creacion")
+  fechaActualizacion DateTime @updatedAt @map("fecha_actualizacion")
 
   @@map("compra")
 }
@@ -344,6 +359,9 @@ model DetalleCompra {
 
   productoId Int      @map("producto_id")
   producto   Producto @relation(fields: [productoId], references: [productoId])
+
+  fechaCreacion      DateTime @default(now()) @map("fecha_creacion")
+  fechaActualizacion DateTime @updatedAt @map("fecha_actualizacion")
 
   @@map("detalle_compra")
 }

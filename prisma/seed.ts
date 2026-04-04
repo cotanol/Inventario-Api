@@ -48,8 +48,8 @@ async function seedUsers() {
       data: {
         nombre: user.nombre,
         apellido: user.apellido,
-        email: user.correoElectronico.toLowerCase().trim(),
-        password: hashedPassword,
+        correoElectronico: user.correoElectronico.toLowerCase().trim(),
+        clave: hashedPassword,
         rolId,
       },
     });

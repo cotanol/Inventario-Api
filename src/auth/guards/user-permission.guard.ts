@@ -43,7 +43,7 @@ export class UserPermissionGuard implements CanActivate {
     }
 
     throw new ForbiddenException(
-      `User ${user.nombres + ' ' + user.apellido} needs one of these permissions: [${validPermissions.join(', ')}]`,
+      `User ${user.nombre + ' ' + user.apellido} needs one of these permissions: [${validPermissions.join(', ')}]`,
     );
   }
 }

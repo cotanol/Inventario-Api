@@ -2,7 +2,7 @@ import { PermisoModulo } from 'generated/prisma/client';
 
 export interface AuthenticatedUser {
   usuarioId: number;
-  nombres: string;
+  nombre: string;
   apellido: string;
   correoElectronico: string;
   estadoRegistro: boolean;

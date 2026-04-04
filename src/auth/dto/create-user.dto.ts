@@ -34,12 +34,12 @@ export class CreateUserDto {
   clave!: string;
 
   @ApiProperty({
-    description: 'Nombres completos del usuario',
+    description: 'Nombre del usuario',
     example: 'Juan Alberto',
   })
   @IsString()
   @MinLength(1)
-  nombres!: string;
+  nombre!: string;
 
   @ApiProperty({
     description: 'Apellidos del usuario',

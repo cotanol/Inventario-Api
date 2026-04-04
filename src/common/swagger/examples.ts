@@ -111,7 +111,7 @@ export const swaggerExamples = {
   },
   authUser: {
     usuarioId: 1,
-    nombres: 'Administrador',
+    nombre: 'Administrador',
     apellido: 'General',
     correoElectronico: 'admin@inventario.pe',
     rol: 'admin',
@@ -120,7 +120,7 @@ export const swaggerExamples = {
   authSession: {
     user: {
       usuarioId: 1,
-      nombres: 'Administrador',
+      nombre: 'Administrador',
       correoElectronico: 'admin@inventario.pe',
       rol: 'admin',
     },

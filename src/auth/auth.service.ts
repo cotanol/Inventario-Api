@@ -42,10 +42,10 @@ export class AuthService {
 
     const createdUser = await this.prisma.usuario.create({
       data: {
-        nombre: userData.nombres,
+        nombre: userData.nombre,
         apellido: userData.apellido,
-        email: emailLower,
-        password: hashedPassword,
+        correoElectronico: emailLower,
+        clave: hashedPassword,
         rolId,
       },
       include: userAuthInclude,
@@ -64,7 +64,7 @@ export class AuthService {
     const emailLower = correoElectronico.toLowerCase().trim();
 
     const user = await this.prisma.usuario.findUnique({
-      where: { email: emailLower },
+      where: { correoElectronico: emailLower },
       include: userAuthInclude,
     });
 
@@ -72,7 +72,7 @@ export class AuthService {
       throw new UnauthorizedException('Invalid credentials');
     }
 
-    const isPasswordValid = await bcrypt.compare(clave, user.password);
+    const isPasswordValid = await bcrypt.compare(clave, user.clave);
     if (!isPasswordValid) {
       throw new UnauthorizedException('Invalid credentials');
     }
@@ -192,9 +192,9 @@ export class AuthService {
     const updatedUser = await this.prisma.usuario.update({
       where: { usuarioId: id },
       data: {
-        nombre: updateUserDto.nombres,
+        nombre: updateUserDto.nombre,
         apellido: updateUserDto.apellido,
-        email: updateUserDto.correoElectronico
+        correoElectronico: updateUserDto.correoElectronico
           ? updateUserDto.correoElectronico.toLowerCase().trim()
           : undefined,
         rolId: updateUserDto.rolId,
@@ -267,9 +267,9 @@ export class AuthService {
   ) {
     return {
       usuarioId: user.usuarioId,
-      nombres: user.nombre,
+      nombre: user.nombre,
       apellido: user.apellido,
-      correoElectronico: user.email,
+      correoElectronico: user.correoElectronico,
       estadoRegistro: user.estadoRegistro,
       fechaCreacion: user.fechaCreacion,
       fechaModificacion: user.fechaActualizacion,
