@@ -5,15 +5,14 @@ import {
   Body,
   Patch,
   Param,
-  Delete,
   ParseIntPipe,
   Query,
 } from '@nestjs/common';
 import { PermisoModulo } from 'generated/prisma/client';
 import { ProveedoresService } from './proveedores.service';
-import { CreateProveedorDto } from './dto/create-proveedor.dto';
-import { UpdateProveedorDto } from './dto/update-proveedor.dto';
+import { CreateProveedorDto, UpdateProveedorDto } from './dto';
 import { RequirePermissions } from 'src/auth/decorators/require-permissions.decorator';
+import { ChangeStatusDto } from 'src/common/dto/change-status.dto';
 import { PaginationQueryDto } from 'src/common/dto/pagination-query.dto';
 import {
   ApiPaginationQueryDocs,
@@ -67,12 +66,19 @@ export class ProveedoresController {
     return this.proveedoresService.update(id, updateProveedorDto);
   }
 
-  @Delete(':id')
+  @Patch(':id/change-status')
   @RequirePermissions(PermisoModulo.PROVEEDORES)
-  @ApiStandardItemResponse('Proveedor eliminado correctamente', 'ok', {
-    dataExample: swaggerExamples.statusMessage,
-  })
-  remove(@Param('id', ParseIntPipe) id: number) {
-    return this.proveedoresService.remove(id);
+  @ApiStandardItemResponse(
+    'Estado de proveedor actualizado correctamente',
+    'ok',
+    {
+      dataExample: swaggerExamples.statusMessage,
+    },
+  )
+  changeStatus(
+    @Param('id', ParseIntPipe) id: number,
+    @Body() changeStatusDto: ChangeStatusDto,
+  ) {
+    return this.proveedoresService.changeStatus(id, changeStatusDto);
   }
 }

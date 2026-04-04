@@ -10,7 +10,7 @@ import {
 } from '@nestjs/common';
 import { PermisoModulo } from 'generated/prisma/client';
 import { PedidosService } from './pedidos.service';
-import { CreatePedidoDto, ChangeEstadoPedidoDto, UpdatePedidoDto } from './dto';
+import { CreatePedidoDto, UpdatePedidoDto } from './dto';
 import { RequirePermissions } from 'src/auth/decorators/require-permissions.decorator';
 import { PaginationQueryDto } from 'src/common/dto/pagination-query.dto';
 import {
@@ -62,15 +62,21 @@ export class PedidosController {
     return this.pedidosService.update(id, updatePedidoDto);
   }
 
-  @Patch(':id/change-estado')
+  @Patch(':id/completar')
   @RequirePermissions(PermisoModulo.PEDIDOS)
-  @ApiStandardItemResponse('Estado de pedido actualizado correctamente', 'ok', {
+  @ApiStandardItemResponse('Pedido completado correctamente', 'ok', {
     dataExample: swaggerExamples.pedido,
   })
-  changeEstado(
-    @Param('id', ParseIntPipe) id: number,
-    @Body() changeEstadoDto: ChangeEstadoPedidoDto,
-  ) {
-    return this.pedidosService.changeEstado(id, changeEstadoDto);
+  completarPedido(@Param('id', ParseIntPipe) id: number) {
+    return this.pedidosService.completarPedido(id);
+  }
+
+  @Patch(':id/cancelar')
+  @RequirePermissions(PermisoModulo.PEDIDOS)
+  @ApiStandardItemResponse('Pedido cancelado correctamente', 'ok', {
+    dataExample: swaggerExamples.pedido,
+  })
+  cancelarPedido(@Param('id', ParseIntPipe) id: number) {
+    return this.pedidosService.cancelarPedido(id);
   }
 }

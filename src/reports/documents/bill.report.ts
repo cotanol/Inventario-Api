@@ -4,7 +4,7 @@ import type {
   TDocumentDefinitions,
   Alignment,
 } from 'pdfmake/interfaces';
-import { Formatter } from 'src/helpers/formatter';
+import { Formatter } from 'src/common/utils/formatter';
 
 const logo: Content = {
   image: 'src/assets/tucan-banner.png',

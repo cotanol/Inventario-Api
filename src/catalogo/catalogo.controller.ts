@@ -19,9 +19,9 @@ import {
   UpdateMarcaDto,
   CreateProductoDto,
   UpdateProductoDto,
-  ChangeStatusDto,
 } from './dto';
 import { RequirePermissions } from 'src/auth/decorators/require-permissions.decorator';
+import { ChangeStatusDto } from 'src/common/dto/change-status.dto';
 import { PaginationQueryDto } from 'src/common/dto/pagination-query.dto';
 import {
   ApiPaginationQueryDocs,

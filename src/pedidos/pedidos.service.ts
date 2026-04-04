@@ -4,14 +4,14 @@ import {
   InternalServerErrorException,
   NotFoundException,
 } from '@nestjs/common';
-import { Prisma } from 'generated/prisma/client';
+import { EstadoPedido, Prisma } from 'generated/prisma/client';
 
 import { PrismaService } from 'src/prisma/prisma.service';
 import { ReportsService } from 'src/reports/reports.service';
 import { PaginationQueryDto } from 'src/common/dto/pagination-query.dto';
 import { buildPaginationMeta } from 'src/common/utils/pagination.util';
 
-import { ChangeEstadoPedidoDto, CreatePedidoDto, UpdatePedidoDto } from './dto';
+import { CreatePedidoDto, UpdatePedidoDto } from './dto';
 
 const PEDIDO_INCLUDE = {
   cliente: true,
@@ -46,7 +46,7 @@ export class PedidosService {
           subtotal: new Prisma.Decimal(totalNeto),
           igv: new Prisma.Decimal(0),
           total: new Prisma.Decimal(totalNeto),
-          estado: 'PENDIENTE',
+          estado: EstadoPedido.PENDIENTE,
         },
       });
 
@@ -119,7 +119,7 @@ export class PedidosService {
   async update(id: number, updatePedidoDto: UpdatePedidoDto) {
     const pedido = await this.findOne(id);
 
-    if (pedido.estadoPedido !== 'PENDIENTE') {
+    if (pedido.estadoPedido !== EstadoPedido.PENDIENTE) {
       throw new BadRequestException(
         'Solo se pueden actualizar pedidos en estado PENDIENTE',
       );
@@ -198,31 +198,41 @@ export class PedidosService {
     return this.mapPedidoResponse(pedidoActualizado);
   }
 
-  async changeEstado(id: number, changeEstadoDto: ChangeEstadoPedidoDto) {
+  async completarPedido(id: number) {
     const pedidoActual = await this.findOne(id);
 
-    if (pedidoActual.estadoPedido === 'COMPLETADO') {
+    if (pedidoActual.estadoPedido === EstadoPedido.COMPLETADO) {
       throw new BadRequestException(
         'No se puede cambiar el estado de un pedido completado',
       );
     }
 
-    if (pedidoActual.estadoPedido === 'CANCELADO') {
+    if (pedidoActual.estadoPedido === EstadoPedido.CANCELADO) {
       throw new BadRequestException(
         'No se puede cambiar el estado de un pedido cancelado',
       );
     }
 
-    const nuevoEstado = changeEstadoDto.estadoPedido;
+    return this.completePedidoAndUpdateEstado(id);
+  }
 
-    if (nuevoEstado === 'COMPLETADO') {
-      return this.completePedidoAndUpdateEstado(id);
+  async cancelarPedido(id: number) {
+    const pedidoActual = await this.findOne(id);
+
+    if (pedidoActual.estadoPedido === EstadoPedido.COMPLETADO) {
+      throw new BadRequestException(
+        'No se puede cancelar un pedido completado',
+      );
+    }
+
+    if (pedidoActual.estadoPedido === EstadoPedido.CANCELADO) {
+      throw new BadRequestException('El pedido ya esta cancelado');
     }
 
     const pedido = await this.prisma.pedido.update({
       where: { pedidoId: id },
       data: {
-        estado: nuevoEstado,
+        estado: EstadoPedido.CANCELADO,
       },
       include: PEDIDO_INCLUDE,
     });
@@ -293,7 +303,7 @@ export class PedidosService {
       return tx.pedido.update({
         where: { pedidoId: id },
         data: {
-          estado: 'COMPLETADO',
+          estado: EstadoPedido.COMPLETADO,
         },
         include: PEDIDO_INCLUDE,
       });

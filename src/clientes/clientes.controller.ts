@@ -9,10 +9,10 @@ import {
   Query,
 } from '@nestjs/common';
 import { PermisoModulo } from 'generated/prisma/client';
+import { ChangeStatusDto } from 'src/common/dto/change-status.dto';
 import { ClientesService } from './clientes.service';
 import { CreateClienteDto } from './dto/create-cliente.dto';
 import { UpdateClienteDto } from './dto/update-cliente.dto';
-import { ChangeStatusDto } from './dto/change-status.dto';
 import { RequirePermissions } from 'src/auth/decorators/require-permissions.decorator';
 import { PaginationQueryDto } from 'src/common/dto/pagination-query.dto';
 import {

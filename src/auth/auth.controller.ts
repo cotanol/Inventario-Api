@@ -11,6 +11,7 @@ import {
 import { ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { PermisoModulo } from 'generated/prisma/client';
 
+import { ChangeStatusDto } from 'src/common/dto/change-status.dto';
 import { PaginationQueryDto } from 'src/common/dto/pagination-query.dto';
 import {
   ApiPaginationQueryDocs,
@@ -22,7 +23,6 @@ import { swaggerExamples } from 'src/common/swagger/examples';
 import { AuthService } from './auth.service';
 import { GetUser } from './decorators/get-user.decorator';
 import { RequirePermissions } from './decorators/require-permissions.decorator';
-import { ChangeStatusDto } from './dto/change-status.dto';
 import { CreateRolDto } from './dto/create-rol.dto';
 import { CreateUserDto, LoginUserDto } from './dto';
 import { UpdateRolDto } from './dto/update-rol.dto';

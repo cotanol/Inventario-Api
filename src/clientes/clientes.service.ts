@@ -4,9 +4,9 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { Prisma } from 'generated/prisma/client';
+import { ChangeStatusDto } from 'src/common/dto/change-status.dto';
 import { CreateClienteDto } from './dto/create-cliente.dto';
 import { UpdateClienteDto } from './dto/update-cliente.dto';
-import { ChangeStatusDto } from './dto/change-status.dto';
 import { PrismaService } from 'src/prisma/prisma.service';
 import { PaginationQueryDto } from 'src/common/dto/pagination-query.dto';
 import { buildPaginationMeta } from 'src/common/utils/pagination.util';

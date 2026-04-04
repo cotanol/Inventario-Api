@@ -8,11 +8,11 @@ import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcrypt';
 import { Prisma } from 'generated/prisma/client';
 
+import { ChangeStatusDto } from 'src/common/dto/change-status.dto';
 import { PrismaService } from 'src/prisma/prisma.service';
 import { PaginationQueryDto } from 'src/common/dto/pagination-query.dto';
 import { buildPaginationMeta } from 'src/common/utils/pagination.util';
 
-import { ChangeStatusDto } from './dto/change-status.dto';
 import { CreateRolDto } from './dto/create-rol.dto';
 import { CreateUserDto } from './dto/create-user.dto';
 import { LoginUserDto } from './dto/login-user.dto';

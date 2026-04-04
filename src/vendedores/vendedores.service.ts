@@ -1,5 +1,6 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
-import { CreateVendedorDto, UpdateVendedorDto, ChangeStatusDto } from './dto';
+import { ChangeStatusDto } from 'src/common/dto/change-status.dto';
+import { CreateVendedorDto, UpdateVendedorDto } from './dto';
 import { PrismaService } from 'src/prisma/prisma.service';
 import { PaginationQueryDto } from 'src/common/dto/pagination-query.dto';
 import { buildPaginationMeta } from 'src/common/utils/pagination.util';

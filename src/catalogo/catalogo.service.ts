@@ -7,7 +7,6 @@ import {
 import { Prisma } from 'generated/prisma/client';
 
 import {
-  ChangeStatusDto,
   CreateGrupoDto,
   CreateLineaDto,
   CreateMarcaDto,
@@ -17,6 +16,7 @@ import {
   UpdateMarcaDto,
   UpdateProductoDto,
 } from './dto';
+import { ChangeStatusDto } from 'src/common/dto/change-status.dto';
 import { PrismaService } from 'src/prisma/prisma.service';
 import { PaginationQueryDto } from 'src/common/dto/pagination-query.dto';
 import { buildPaginationMeta } from 'src/common/utils/pagination.util';

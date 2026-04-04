@@ -4,19 +4,15 @@ import {
   InternalServerErrorException,
   NotFoundException,
 } from '@nestjs/common';
-import { Prisma } from 'generated/prisma/client';
+import { EstadoCompra, Prisma } from 'generated/prisma/client';
 
 import { PrismaService } from 'src/prisma/prisma.service';
 import { ReportsService } from 'src/reports/reports.service';
+import { ChangeStatusDto } from 'src/common/dto/change-status.dto';
 import { PaginationQueryDto } from 'src/common/dto/pagination-query.dto';
 import { buildPaginationMeta } from 'src/common/utils/pagination.util';
 
-import { CreateCompraDto } from './dto/create-compra.dto';
-import {
-  ConfirmarOrdenDto,
-  RecibirMercaderiaDto,
-  UpdateCompraDto,
-} from './dto/update-compra.dto';
+import { CreateCompraDto, UpdateCompraDto } from './dto';
 
 const COMPRA_INCLUDE = {
   proveedor: true,
@@ -48,7 +44,7 @@ export class ComprasService {
           fechaEntregaEstimada: createCompraDto.fechaLlegadaEstimada
             ? new Date(createCompraDto.fechaLlegadaEstimada)
             : undefined,
-          estado: createCompraDto.estadoCompra ?? 'BORRADOR',
+          estado: createCompraDto.estadoCompra ?? EstadoCompra.BORRADOR,
           total: new Prisma.Decimal(totalCompra),
         },
       });
@@ -123,21 +119,21 @@ export class ComprasService {
   async update(id: number, updateCompraDto: UpdateCompraDto) {
     const compra = await this.findOne(id);
 
-    if (compra.estadoCompra === 'COMPLETADO') {
+    if (compra.estadoCompra === EstadoCompra.COMPLETADO) {
       throw new BadRequestException(
         'No se puede modificar una compra completada',
       );
     }
 
-    if (compra.estadoCompra === 'CANCELADO') {
+    if (compra.estadoCompra === EstadoCompra.CANCELADO) {
       throw new BadRequestException(
         'No se puede modificar una compra cancelada',
       );
     }
 
     if (
-      compra.estadoCompra !== 'BORRADOR' &&
-      compra.estadoCompra !== 'ORDENADO'
+      compra.estadoCompra !== EstadoCompra.BORRADOR &&
+      compra.estadoCompra !== EstadoCompra.ORDENADO
     ) {
       throw new BadRequestException(
         'Solo se pueden editar compras en estado BORRADOR u ORDENADO',
@@ -148,7 +144,7 @@ export class ComprasService {
       await this.validateProveedorExists(updateCompraDto.proveedorId);
     }
 
-    if (compra.estadoCompra === 'ORDENADO') {
+    if (compra.estadoCompra === EstadoCompra.ORDENADO) {
       const updated = await this.prisma.compra.update({
         where: { compraId: id },
         data: {
@@ -233,24 +229,23 @@ export class ComprasService {
     return this.mapCompraResponse(compraActualizada);
   }
 
-  async remove(id: number): Promise<void> {
-    const compra = await this.findOne(id);
+  async changeStatus(id: number, changeStatusDto: ChangeStatusDto) {
+    await this.findOne(id);
 
-    if (compra.estadoCompra !== 'BORRADOR') {
-      throw new BadRequestException(
-        'Solo se pueden eliminar compras en estado BORRADOR',
-      );
-    }
-
-    await this.prisma.compra.delete({
+    await this.prisma.compra.update({
       where: { compraId: id },
+      data: { estadoRegistro: changeStatusDto.estadoRegistro },
     });
+
+    return {
+      message: `Estado de la compra actualizado a ${changeStatusDto.estadoRegistro ? 'activo' : 'inactivo'}.`,
+    };
   }
 
-  async confirmarOrden(id: number, confirmarOrdenDto: ConfirmarOrdenDto) {
+  async confirmarOrden(id: number, fechaLlegadaEstimada?: string) {
     const compra = await this.findOne(id);
 
-    if (compra.estadoCompra !== 'BORRADOR') {
+    if (compra.estadoCompra !== EstadoCompra.BORRADOR) {
       throw new BadRequestException(
         'Solo se pueden confirmar compras en estado BORRADOR',
       );
@@ -265,9 +260,9 @@ export class ComprasService {
     const compraOrdenada = await this.prisma.compra.update({
       where: { compraId: id },
       data: {
-        estado: 'ORDENADO',
-        fechaEntregaEstimada: confirmarOrdenDto.fechaLlegadaEstimada
-          ? new Date(confirmarOrdenDto.fechaLlegadaEstimada)
+        estado: EstadoCompra.ORDENADO,
+        fechaEntregaEstimada: fechaLlegadaEstimada
+          ? new Date(fechaLlegadaEstimada)
           : undefined,
       },
       include: COMPRA_INCLUDE,
@@ -301,7 +296,7 @@ export class ComprasService {
   async marcarEnTransito(id: number, fechaLlegadaEstimada?: string) {
     const compra = await this.findOne(id);
 
-    if (compra.estadoCompra !== 'ORDENADO') {
+    if (compra.estadoCompra !== EstadoCompra.ORDENADO) {
       throw new BadRequestException(
         'Solo se pueden marcar en transito compras en estado ORDENADO',
       );
@@ -310,7 +305,7 @@ export class ComprasService {
     const updated = await this.prisma.compra.update({
       where: { compraId: id },
       data: {
-        estado: 'EN_TRANSITO',
+        estado: EstadoCompra.EN_TRANSITO,
         fechaEntregaEstimada: fechaLlegadaEstimada
           ? new Date(fechaLlegadaEstimada)
           : undefined,
@@ -323,18 +318,23 @@ export class ComprasService {
 
   async recibirMercaderia(
     id: number,
-    recibirMercaderiaDto: RecibirMercaderiaDto,
+    body: {
+      detalles: Array<{
+        detalleCompraId: number;
+        cantidadRecibida: number;
+      }>;
+    },
   ) {
     const compra = await this.findOne(id);
 
-    if (compra.estadoCompra !== 'EN_TRANSITO') {
+    if (compra.estadoCompra !== EstadoCompra.EN_TRANSITO) {
       throw new BadRequestException(
         'Solo se pueden recibir compras en estado EN_TRANSITO',
       );
     }
 
     const compraActualizada = await this.prisma.$transaction(async (tx) => {
-      for (const detalleRecibido of recibirMercaderiaDto.detalles) {
+      for (const detalleRecibido of body.detalles) {
         const detalle = await tx.detalleCompra.findUnique({
           where: { detalleId: detalleRecibido.detalleCompraId },
           include: {
@@ -392,7 +392,7 @@ export class ComprasService {
       return tx.compra.update({
         where: { compraId: id },
         data: {
-          estado: 'COMPLETADO',
+          estado: EstadoCompra.COMPLETADO,
         },
         include: COMPRA_INCLUDE,
       });
@@ -404,20 +404,20 @@ export class ComprasService {
   async cancelarCompra(id: number) {
     const compra = await this.findOne(id);
 
-    if (compra.estadoCompra === 'COMPLETADO') {
+    if (compra.estadoCompra === EstadoCompra.COMPLETADO) {
       throw new BadRequestException(
         'No se puede cancelar una compra que ya ha sido completada. Si necesita revertir el inventario, debe hacer un ajuste manual.',
       );
     }
 
-    if (compra.estadoCompra === 'CANCELADO') {
+    if (compra.estadoCompra === EstadoCompra.CANCELADO) {
       throw new BadRequestException('La compra ya esta cancelada');
     }
 
     const updated = await this.prisma.compra.update({
       where: { compraId: id },
       data: {
-        estado: 'CANCELADO',
+        estado: EstadoCompra.CANCELADO,
       },
       include: COMPRA_INCLUDE,
     });

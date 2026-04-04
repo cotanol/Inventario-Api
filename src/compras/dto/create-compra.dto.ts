@@ -11,22 +11,8 @@ import {
 } from 'class-validator';
 import { Type } from 'class-transformer';
 import { EstadoCompra } from 'generated/prisma/client';
+import { CreateDetalleCompraDto } from './create-detalle-compra.dto';
 
-// DTO para cada detalle de la compra
-export class CreateDetalleCompraDto {
-  @IsInt()
-  @IsPositive()
-  productoId!: number;
-
-  @IsInt()
-  @IsPositive()
-  cantidadSolicitada!: number;
-
-  @IsPositive()
-  costoUnitario!: number;
-}
-
-// DTO principal para crear una compra
 export class CreateCompraDto {
   @IsInt()
   @IsNotEmpty()

@@ -5,19 +5,14 @@ import {
   Body,
   Patch,
   Param,
-  Delete,
   ParseIntPipe,
   Query,
 } from '@nestjs/common';
 import { PermisoModulo } from 'generated/prisma/client';
 import { ComprasService } from './compras.service';
-import { CreateCompraDto } from './dto/create-compra.dto';
-import {
-  UpdateCompraDto,
-  ConfirmarOrdenDto,
-  RecibirMercaderiaDto,
-} from './dto/update-compra.dto';
+import { CreateCompraDto, UpdateCompraDto } from './dto';
 import { RequirePermissions } from 'src/auth/decorators/require-permissions.decorator';
+import { ChangeStatusDto } from 'src/common/dto/change-status.dto';
 import { PaginationQueryDto } from 'src/common/dto/pagination-query.dto';
 import {
   ApiPaginationQueryDocs,
@@ -68,13 +63,16 @@ export class ComprasController {
     return this.comprasService.update(id, updateCompraDto);
   }
 
-  @Delete(':id')
+  @Patch(':id/change-status')
   @RequirePermissions(PermisoModulo.COMPRAS)
-  @ApiStandardItemResponse('Compra eliminada correctamente', 'ok', {
+  @ApiStandardItemResponse('Estado de compra actualizado correctamente', 'ok', {
     dataExample: swaggerExamples.statusMessage,
   })
-  remove(@Param('id', ParseIntPipe) id: number) {
-    return this.comprasService.remove(id);
+  changeStatus(
+    @Param('id', ParseIntPipe) id: number,
+    @Body() changeStatusDto: ChangeStatusDto,
+  ) {
+    return this.comprasService.changeStatus(id, changeStatusDto);
   }
 
   // ============================================================
@@ -88,9 +86,9 @@ export class ComprasController {
   })
   confirmarOrden(
     @Param('id', ParseIntPipe) id: number,
-    @Body() confirmarOrdenDto: ConfirmarOrdenDto,
+    @Body() body: { fechaLlegadaEstimada?: string },
   ) {
-    return this.comprasService.confirmarOrden(id, confirmarOrdenDto);
+    return this.comprasService.confirmarOrden(id, body.fechaLlegadaEstimada);
   }
 
   @Patch(':id/transito')
@@ -112,9 +110,15 @@ export class ComprasController {
   })
   recibirMercaderia(
     @Param('id', ParseIntPipe) id: number,
-    @Body() recibirMercaderiaDto: RecibirMercaderiaDto,
+    @Body()
+    body: {
+      detalles: Array<{
+        detalleCompraId: number;
+        cantidadRecibida: number;
+      }>;
+    },
   ) {
-    return this.comprasService.recibirMercaderia(id, recibirMercaderiaDto);
+    return this.comprasService.recibirMercaderia(id, body);
   }
 
   @Patch(':id/cancelar')

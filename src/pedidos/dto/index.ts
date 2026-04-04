@@ -1,3 +1,3 @@
-export { CreatePedidoDto, CreateDetallePedidoDto } from './create-pedido.dto';
+export { CreatePedidoDto } from './create-pedido.dto';
+export { CreateDetallePedidoDto } from './create-detalle-pedido.dto';
 export { UpdatePedidoDto } from './update-pedido.dto';
-export { ChangeEstadoPedidoDto } from './change-estado-pedido.dto';

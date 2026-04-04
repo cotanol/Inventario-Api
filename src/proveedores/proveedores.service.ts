@@ -1,6 +1,6 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
-import { CreateProveedorDto } from './dto/create-proveedor.dto';
-import { UpdateProveedorDto } from './dto/update-proveedor.dto';
+import { ChangeStatusDto } from 'src/common/dto/change-status.dto';
+import { CreateProveedorDto, UpdateProveedorDto } from './dto';
 import { PrismaService } from 'src/prisma/prisma.service';
 import { PaginationQueryDto } from 'src/common/dto/pagination-query.dto';
 import { buildPaginationMeta } from 'src/common/utils/pagination.util';
@@ -62,10 +62,16 @@ export class ProveedoresService {
     });
   }
 
-  async remove(id: number) {
+  async changeStatus(id: number, changeStatusDto: ChangeStatusDto) {
     await this.findOne(id);
-    await this.prisma.proveedor.delete({
+
+    await this.prisma.proveedor.update({
       where: { proveedorId: id },
+      data: { estadoRegistro: changeStatusDto.estadoRegistro },
     });
+
+    return {
+      message: `Estado del proveedor actualizado a ${changeStatusDto.estadoRegistro ? 'activo' : 'inactivo'}.`,
+    };
   }
 }

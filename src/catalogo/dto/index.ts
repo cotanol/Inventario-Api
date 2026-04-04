@@ -6,4 +6,3 @@ export { CreateMarcaDto } from './create-marca.dto';
 export { UpdateMarcaDto } from './update-marca.dto';
 export { CreateProductoDto } from './create-producto.dto';
 export { UpdateProductoDto } from './update-producto.dto';
-export { ChangeStatusDto } from './change-status.dto';
